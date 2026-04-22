@@ -2,12 +2,16 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
   <title>venus music</title>
   <meta name="theme-color" content="#07080d">
   <style>
     :root {
       color-scheme: dark;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
       --bg: #07080d;
       --ink: #f7f3ea;
       --muted: rgba(247, 243, 234, .62);
@@ -107,6 +111,9 @@
       min-height: 100svh;
       isolation: isolate;
       transition: background .65s var(--spring), color .65s var(--spring);
+      overscroll-behavior-y: none;
+      background-size: 180% 180%;
+      animation: backgroundFlow 18s ease-in-out infinite alternate;
     }
 
     body.is-locked .shell {
@@ -116,9 +123,14 @@
       transition: filter .8s var(--spring), transform .8s var(--spring);
     }
 
+    body.is-locked .admin-fab {
+      display: none;
+    }
+
     button,
     input {
       font: inherit;
+      touch-action: manipulation;
     }
 
     button {
@@ -127,7 +139,8 @@
 
     .noise,
     .aurora,
-    .headlights {
+    .headlights,
+    .ambient-dots {
       position: fixed;
       inset: 0;
       pointer-events: none;
@@ -175,6 +188,41 @@
       opacity: .55;
       animation-delay: -4s;
     }
+
+    .ambient-dots {
+      display: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .ambient-dots span {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 0 18px rgba(255, 255, 255, .55), 0 0 34px color-mix(in srgb, var(--accent) 46%, transparent), 0 0 58px color-mix(in srgb, var(--accent-2) 18%, transparent);
+      opacity: .54;
+      animation: floatDot linear infinite;
+      will-change: transform, opacity;
+    }
+
+    .ambient-dots span:nth-child(1) { left: 6%; top: 12%; width: 5px; height: 5px; --from-x: -24vw; --from-y: -10vh; --mid-x: 16vw; --mid-y: 8vh; --to-x: 34vw; --to-y: 18vh; animation-duration: 7s; animation-delay: -1s; }
+    .ambient-dots span:nth-child(2) { left: 12%; top: 76%; width: 8px; height: 8px; --from-x: -22vw; --from-y: 16vh; --mid-x: 18vw; --mid-y: -6vh; --to-x: 42vw; --to-y: -18vh; animation-duration: 9s; animation-delay: -5s; }
+    .ambient-dots span:nth-child(3) { left: 18%; top: 28%; width: 4px; height: 4px; --from-x: -20vw; --from-y: -12vh; --mid-x: 22vw; --mid-y: 6vh; --to-x: 46vw; --to-y: 16vh; animation-duration: 8s; animation-delay: -3s; }
+    .ambient-dots span:nth-child(4) { left: 26%; top: 90%; width: 7px; height: 7px; --from-x: -10vw; --from-y: 18vh; --mid-x: 10vw; --mid-y: -12vh; --to-x: 22vw; --to-y: -26vh; animation-duration: 10s; animation-delay: -7s; }
+    .ambient-dots span:nth-child(5) { left: 34%; top: 8%; width: 6px; height: 6px; --from-x: 0vw; --from-y: -18vh; --mid-x: 8vw; --mid-y: 10vh; --to-x: 18vw; --to-y: 24vh; animation-duration: 7.5s; animation-delay: -4s; }
+    .ambient-dots span:nth-child(6) { left: 44%; top: 82%; width: 9px; height: 9px; --from-x: -4vw; --from-y: 16vh; --mid-x: 6vw; --mid-y: -8vh; --to-x: 16vw; --to-y: -24vh; animation-duration: 11s; animation-delay: -8s; }
+    .ambient-dots span:nth-child(7) { left: 52%; top: 10%; width: 5px; height: 5px; --from-x: 2vw; --from-y: -16vh; --mid-x: -10vw; --mid-y: 8vh; --to-x: -18vw; --to-y: 22vh; animation-duration: 8.5s; animation-delay: -2s; }
+    .ambient-dots span:nth-child(8) { left: 60%; top: 88%; width: 6px; height: 6px; --from-x: 4vw; --from-y: 18vh; --mid-x: -8vw; --mid-y: -8vh; --to-x: -18vw; --to-y: -24vh; animation-duration: 9.5s; animation-delay: -6s; }
+    .ambient-dots span:nth-child(9) { left: 68%; top: 18%; width: 4px; height: 4px; --from-x: 18vw; --from-y: -12vh; --mid-x: -12vw; --mid-y: 6vh; --to-x: -28vw; --to-y: 18vh; animation-duration: 7.8s; animation-delay: -1.5s; }
+    .ambient-dots span:nth-child(10) { left: 78%; top: 72%; width: 8px; height: 8px; --from-x: 22vw; --from-y: 12vh; --mid-x: -14vw; --mid-y: -6vh; --to-x: -32vw; --to-y: -18vh; animation-duration: 10.5s; animation-delay: -7.5s; }
+    .ambient-dots span:nth-child(11) { left: 86%; top: 14%; width: 5px; height: 5px; --from-x: 24vw; --from-y: -14vh; --mid-x: -10vw; --mid-y: 8vh; --to-x: -30vw; --to-y: 20vh; animation-duration: 8.2s; animation-delay: -2.5s; }
+    .ambient-dots span:nth-child(12) { left: 92%; top: 52%; width: 7px; height: 7px; --from-x: 20vw; --from-y: 0vh; --mid-x: -10vw; --mid-y: -4vh; --to-x: -26vw; --to-y: -10vh; animation-duration: 9.8s; animation-delay: -6.5s; }
+    .ambient-dots span:nth-child(13) { left: 8%; top: 44%; width: 3px; height: 3px; --from-x: -20vw; --from-y: 0vh; --mid-x: 18vw; --mid-y: -2vh; --to-x: 34vw; --to-y: -6vh; animation-duration: 6.8s; animation-delay: -4.5s; }
+    .ambient-dots span:nth-child(14) { left: 38%; top: 94%; width: 4px; height: 4px; --from-x: 0vw; --from-y: 16vh; --mid-x: 6vw; --mid-y: -10vh; --to-x: 14vw; --to-y: -26vh; animation-duration: 11.2s; animation-delay: -8.5s; }
+    .ambient-dots span:nth-child(15) { left: 72%; top: 96%; width: 3px; height: 3px; --from-x: 0vw; --from-y: 18vh; --mid-x: -8vw; --mid-y: -12vh; --to-x: -18vw; --to-y: -28vh; animation-duration: 7.2s; animation-delay: -5.2s; }
+    .ambient-dots span:nth-child(16) { left: 94%; top: 36%; width: 4px; height: 4px; --from-x: 18vw; --from-y: 0vh; --mid-x: -14vw; --mid-y: 6vh; --to-x: -34vw; --to-y: 14vh; animation-duration: 8.8s; animation-delay: -3.8s; }
 
     .shell {
       display: grid;
@@ -704,7 +752,8 @@
       display: block;
       min-height: 100svh;
       padding: 0;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     .topbar,
@@ -900,6 +949,108 @@
       text-transform: lowercase;
     }
 
+    @media (max-width: 760px), (pointer: coarse) {
+      body,
+      .shell,
+      .hero,
+      .copy {
+        min-height: 100dvh;
+      }
+
+      .shell {
+        padding: calc(var(--safe-top) + 10px) calc(var(--safe-right) + 10px) calc(var(--safe-bottom) + 12px) calc(var(--safe-left) + 10px);
+      }
+
+      .hero {
+        align-items: center;
+        padding: 0;
+      }
+
+      .visual-stage {
+        display: none;
+        inset: -18vmax;
+        opacity: .72;
+      }
+
+      #stage {
+        width: min(140vmax, 1180px);
+      }
+
+      .copy {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        display: grid;
+        align-content: center;
+      }
+
+      .player-panel {
+        align-self: center;
+        width: 100%;
+        max-width: min(680px, 96vw);
+        margin: 0 auto;
+        border-radius: 26px;
+        max-height: min(86dvh, 860px);
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        box-shadow:
+          0 14px 34px rgba(0, 0, 0, .26),
+          inset 0 1px 0 rgba(255, 255, 255, .22);
+        backdrop-filter: blur(8px) saturate(104%);
+        -webkit-backdrop-filter: blur(8px) saturate(104%);
+        transition: opacity .25s ease, transform .25s ease;
+      }
+
+      .player-panel::before,
+      .player-panel::after {
+        opacity: .18;
+      }
+
+      .controls {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+
+      .progress {
+        height: 22px;
+      }
+
+      .progress-thumb {
+        width: 18px;
+        height: 18px;
+      }
+
+      .progress-bubble {
+        display: none;
+      }
+
+      .track-list {
+        max-height: min(34dvh, 300px);
+      }
+
+      .album-avatar {
+        box-shadow: 0 12px 26px rgba(0, 0, 0, .22);
+        transition: background .25s ease, border-color .25s ease, box-shadow .25s ease;
+      }
+
+      .ambient-dots {
+        display: none;
+      }
+
+      .ambient-dots span:nth-child(n+9) {
+        display: none;
+      }
+
+      .noise,
+      .headlights {
+        display: none;
+      }
+    }
+
     .controls {
       grid-template-columns: 46px 64px 46px 46px 46px 46px;
       justify-content: center;
@@ -1060,16 +1211,20 @@
 
     @media (max-width: 620px) {
       .aurora {
-        filter: blur(30px) saturate(108%);
-        opacity: .42;
+        filter: blur(20px) saturate(102%);
+        opacity: .24;
       }
 
       .headlights {
-        opacity: .42;
+        display: none;
+      }
+
+      .noise {
+        opacity: .03;
       }
 
       .shell {
-        padding: 0;
+        padding: calc(var(--safe-top) + 8px) calc(var(--safe-right) + 8px) calc(var(--safe-bottom) + 10px) calc(var(--safe-left) + 8px);
       }
 
       .topbar {
@@ -1088,19 +1243,24 @@
       }
 
       .copy {
-        width: min(100%, 390px);
-        padding: 0 14px;
+        width: 100%;
+        padding: 0;
       }
 
       .player-panel {
+        width: 100%;
         padding: 14px;
         border-radius: 24px;
         box-shadow:
-          0 20px 64px rgba(0, 0, 0, .42),
-          0 8px 24px color-mix(in srgb, var(--accent) 10%, transparent),
+          0 12px 30px rgba(0, 0, 0, .24),
           inset 0 1px 0 rgba(255, 255, 255, .28);
-        backdrop-filter: blur(14px) saturate(125%);
-        -webkit-backdrop-filter: blur(14px) saturate(125%);
+        backdrop-filter: blur(6px) saturate(102%);
+        -webkit-backdrop-filter: blur(6px) saturate(102%);
+      }
+
+      .settings-inner,
+      .drawer-inner {
+        gap: 14px;
       }
 
       .album-avatar {
@@ -1115,6 +1275,11 @@
 
       .track-title {
         font-size: 18px;
+      }
+
+      .theme-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
       }
 
       .theme-grid {
@@ -1143,7 +1308,7 @@
       }
 
       #stage {
-        width: min(132vmax, 980px);
+        width: min(118vmax, 820px);
       }
     }
 
@@ -1162,6 +1327,20 @@
       to {
         opacity: 1;
         transform: none;
+      }
+    }
+
+    @keyframes backgroundFlow {
+      0% {
+        background-position: 0% 30%;
+      }
+
+      50% {
+        background-position: 100% 70%;
+      }
+
+      100% {
+        background-position: 20% 100%;
       }
     }
 
@@ -1218,12 +1397,373 @@
         transform: translateX(-4px);
       }
     }
+
+    @keyframes floatDot {
+      0% {
+        transform: translate3d(var(--from-x, 0), var(--from-y, 0), 0) scale(.72);
+        opacity: 0;
+      }
+      12% {
+        opacity: .54;
+      }
+      55% {
+        transform: translate3d(var(--mid-x, 18px), var(--mid-y, -46px), 0) scale(1.24);
+        opacity: .62;
+      }
+      100% {
+        transform: translate3d(var(--to-x, -18px), var(--to-y, -96px), 0) scale(.92);
+        opacity: 0;
+      }
+    }
+
+    .playlist-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+
+    .playlist-chip {
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      color: rgba(247, 243, 234, .8);
+      padding: 10px 14px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: transform .28s var(--spring), border-color .28s var(--spring), background .28s var(--spring);
+    }
+
+    .playlist-chip.is-active {
+      background: color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, .08));
+      border-color: color-mix(in srgb, var(--accent) 72%, transparent);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .admin-fab {
+      position: fixed;
+      right: max(16px, calc(var(--safe-right) + 16px));
+      bottom: max(18px, calc(var(--safe-bottom) + 18px));
+      z-index: 25;
+      min-width: 88px;
+      height: 44px;
+      border: 1px solid rgba(255, 255, 255, .18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      color: rgba(255, 244, 244, .82);
+      backdrop-filter: blur(18px) saturate(130%);
+      -webkit-backdrop-filter: blur(18px) saturate(130%);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, .24);
+      text-transform: uppercase;
+      letter-spacing: .16em;
+      font-size: 11px;
+      cursor: pointer;
+      transition: transform .28s var(--spring), background .28s var(--spring), border-color .28s var(--spring);
+    }
+
+    .admin-fab:hover {
+      transform: translateY(-2px);
+      background: color-mix(in srgb, var(--accent) 16%, rgba(255, 255, 255, .08));
+      border-color: rgba(255, 255, 255, .3);
+    }
+
+    .admin-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+    }
+
+    .admin-backdrop {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, .11), transparent 28%),
+        rgba(6, 7, 11, .72);
+      backdrop-filter: blur(22px) saturate(130%);
+      -webkit-backdrop-filter: blur(22px) saturate(130%);
+    }
+
+    .admin-shell {
+      position: relative;
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .admin-panel {
+      width: min(940px, 100%);
+      max-height: min(88dvh, 880px);
+      overflow: auto;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 28px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, .035)),
+        rgba(10, 11, 16, .9);
+      box-shadow: 0 34px 110px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(255, 255, 255, .1);
+      padding: 22px;
+    }
+
+    .admin-head,
+    .admin-subhead,
+    .admin-log-head,
+    .playlist-builder-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .admin-kicker {
+      margin: 0 0 6px;
+      text-transform: uppercase;
+      letter-spacing: .2em;
+      font-size: 10px;
+      color: rgba(255, 244, 244, .56);
+    }
+
+    .admin-title {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 46px);
+      line-height: .96;
+      color: #fff6f8;
+      text-shadow: 0 0 18px rgba(255, 255, 255, .24), 0 0 42px rgba(255, 79, 123, .3);
+    }
+
+    .admin-close,
+    .admin-pass-btn,
+    .admin-action-btn,
+    .admin-primary-btn,
+    .admin-mini-btn {
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 16px;
+      color: var(--ink);
+      cursor: pointer;
+      background: rgba(255, 255, 255, .08);
+      transition: transform .24s var(--spring), background .24s var(--spring), border-color .24s var(--spring);
+    }
+
+    .admin-close,
+    .admin-action-btn,
+    .admin-primary-btn {
+      min-height: 44px;
+      padding: 0 16px;
+    }
+
+    .admin-mini-btn {
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .admin-close:hover,
+    .admin-pass-btn:hover,
+    .admin-action-btn:hover,
+    .admin-primary-btn:hover,
+    .admin-mini-btn:hover {
+      transform: translateY(-1px);
+      background: color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, .08));
+      border-color: rgba(255, 255, 255, .26);
+    }
+
+    .admin-copy,
+    .admin-log-status {
+      color: rgba(255, 244, 244, .66);
+    }
+
+    .admin-gate {
+      width: min(420px, 100%);
+      margin: 30px auto 8px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, .11);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .045);
+    }
+
+    .admin-copy {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .admin-pass-form {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .admin-pass-input,
+    .admin-text-input {
+      flex: 1;
+      min-height: 44px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 16px;
+      padding: 0 16px;
+      background: rgba(255, 255, 255, .06);
+      color: var(--ink);
+    }
+
+    .admin-error {
+      min-height: 18px;
+      margin: 10px 0 0;
+      color: #ffb7c6;
+      opacity: 0;
+      transition: opacity .24s ease;
+    }
+
+    .admin-error.is-visible {
+      opacity: 1;
+    }
+
+    .admin-grid,
+    .playlist-builder-grid,
+    .admin-actions,
+    .admin-metrics {
+      display: grid;
+      gap: 16px;
+    }
+
+    .admin-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 18px;
+    }
+
+    .admin-card,
+    .admin-subcard {
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, .04);
+      padding: 16px;
+    }
+
+    .admin-card-wide {
+      grid-column: 1 / -1;
+    }
+
+    .admin-card-title,
+    .admin-subcard h4 {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .admin-actions {
+      grid-template-columns: 1fr;
+      margin-bottom: 12px;
+    }
+
+    .admin-metrics {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .metric-pill {
+      border: 1px solid rgba(255, 255, 255, .08);
+      border-radius: 16px;
+      padding: 12px;
+      background: rgba(0, 0, 0, .16);
+    }
+
+    .metric-label {
+      margin: 0 0 6px;
+      color: rgba(255, 244, 244, .56);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+    }
+
+    .metric-value {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .playlist-builder-grid {
+      grid-template-columns: 1.25fr .95fr;
+      margin-top: 16px;
+    }
+
+    .admin-track-picker,
+    .admin-playlists,
+    .admin-log-list {
+      display: grid;
+      gap: 10px;
+      max-height: 340px;
+      overflow: auto;
+    }
+
+    .picker-row,
+    .admin-playlist-row,
+    .admin-log-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .picker-row.is-selected {
+      border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+      background: color-mix(in srgb, var(--accent) 12%, rgba(255, 255, 255, .04));
+    }
+
+    .picker-meta,
+    .admin-log-meta {
+      color: rgba(255, 244, 244, .56);
+      font-size: 12px;
+    }
+
+    .picker-toggle,
+    .admin-row-btn {
+      min-height: 38px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .08);
+      color: var(--ink);
+      cursor: pointer;
+    }
+
+    .admin-row-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .admin-grid,
+      .playlist-builder-grid,
+      .admin-metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-shell {
+        padding: 12px;
+      }
+
+      .admin-panel {
+        padding: 18px;
+        border-radius: 24px;
+      }
+
+      .admin-pass-form,
+      .playlist-builder-head,
+      .admin-head,
+      .admin-subhead,
+      .admin-log-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
   </style>
 </head>
 <body data-theme="red" class="is-locked">
   <div class="aurora" aria-hidden="true"></div>
   <div class="noise" aria-hidden="true"></div>
   <div class="headlights" aria-hidden="true"><span></span><span></span></div>
+  <div class="ambient-dots" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
 
   <section class="lock-screen" id="lockScreen" aria-label="Вход">
     <div class="lock-card" id="lockCard">
@@ -1332,15 +1872,101 @@
   <audio id="audio" preload="auto" crossorigin="anonymous" playsinline></audio>
 
   <script type="module">
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isMobile = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
+    const ENABLE_VISUALIZER = !isMobile;
+    const deviceMemory = Number(navigator.deviceMemory || 0);
+    const hardwareThreads = Number(navigator.hardwareConcurrency || 0);
+    const isLowPowerMobile = isMobile && ((deviceMemory > 0 && deviceMemory <= 4) || (hardwareThreads > 0 && hardwareThreads <= 6));
+    const useLiteVisualizer = prefersReducedMotion
+      || isMobile
+      || (deviceMemory > 0 && deviceMemory <= 4)
+      || (hardwareThreads > 0 && hardwareThreads <= 6);
+    const MOBILE_FRAME_MIN = isMobile ? 1000 / (isLowPowerMobile ? 24 : 30) : 0;
+    const UI_FRAME_MIN = isMobile ? 1000 / 24 : 0;
+    const AUDIO_SAMPLE_MIN = useLiteVisualizer ? 1000 / (isLowPowerMobile ? 18 : 24) : 1000 / 60;
+    const MOBILE_PIXEL_RATIO = isLowPowerMobile ? .38 : .48;
+    const DESKTOP_PIXEL_RATIO = 1.5;
     let THREE;
 
-    try {
-      THREE = await import("https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js");
-    } catch (error) {
-      console.warn("Three.js CDN unavailable, using canvas fallback.", error);
+    if (ENABLE_VISUALIZER && !useLiteVisualizer) {
+      try {
+        THREE = await import("https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js");
+      } catch (error) {
+        console.warn("Three.js CDN unavailable, using canvas fallback.", error);
+      }
     }
 
     let tracks = [];
+
+    document.body.insertAdjacentHTML("beforeend", `
+      <button class="admin-fab" id="adminFab" type="button" aria-label="Открыть админку">admin</button>
+      <section class="admin-overlay" id="adminOverlay" aria-label="Админ панель" hidden>
+        <div class="admin-backdrop" id="adminBackdrop"></div>
+        <div class="admin-shell">
+          <div class="admin-panel" id="adminPanel">
+            <div class="admin-head">
+              <div>
+                <p class="admin-kicker">secure control</p>
+                <h2 class="admin-title">Admin</h2>
+              </div>
+              <button class="admin-close" id="adminClose" type="button" aria-label="Закрыть админку">close</button>
+            </div>
+            <div class="admin-gate" id="adminGate">
+              <p class="admin-copy">Введите пароль</p>
+              <form class="admin-pass-form" id="adminPassForm">
+                <input class="admin-pass-input" id="adminPassInput" type="password" inputmode="numeric" autocomplete="off" placeholder="••••" aria-label="Пароль админа">
+                <button class="admin-pass-btn" type="submit">unlock</button>
+              </form>
+              <p class="admin-error" id="adminError">Неверный пароль</p>
+            </div>
+            <div class="admin-dashboard" id="adminDashboard" hidden>
+              <div class="admin-grid">
+                <section class="admin-card">
+                  <h3 class="admin-card-title">Сайт</h3>
+                  <div class="admin-actions">
+                    <button class="admin-action-btn" id="refreshMetricsBtn" type="button">Проверить ping</button>
+                  </div>
+                  <div class="admin-metrics" id="metricsGrid"></div>
+                </section>
+                <section class="admin-card admin-card-wide">
+                  <h3 class="admin-card-title">Конструктор плейлистов</h3>
+                  <div class="playlist-builder">
+                    <div class="playlist-builder-head">
+                      <input class="admin-text-input" id="playlistNameInput" type="text" maxlength="40" placeholder="Название плейлиста">
+                      <button class="admin-primary-btn" id="savePlaylistBtn" type="button">Сохранить плейлист</button>
+                    </div>
+                    <div class="playlist-builder-grid">
+                      <div class="admin-subcard">
+                        <div class="admin-subhead">
+                          <h4>Доступная музыка</h4>
+                          <button class="admin-mini-btn" id="clearPlaylistDraftBtn" type="button">Сбросить</button>
+                        </div>
+                        <div class="admin-track-picker" id="adminTrackPicker"></div>
+                      </div>
+                      <div class="admin-subcard">
+                        <div class="admin-subhead">
+                          <h4>Готовые плейлисты</h4>
+                        </div>
+                        <div class="admin-playlists" id="adminPlaylists"></div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+                <section class="admin-card admin-card-wide">
+                  <h3 class="admin-card-title">Логи сайта</h3>
+                  <div class="admin-log-head">
+                    <span class="admin-log-status" id="firebaseStatus">Firebase: connecting...</span>
+                    <span class="admin-log-status" id="sessionStatus">Session: pending</span>
+                  </div>
+                  <div class="admin-log-list" id="adminLogList"></div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `);
 
     const root = document.documentElement;
     const body = document.body;
@@ -1362,6 +1988,8 @@
     const albumAvatar = document.querySelector(".album-avatar");
     const progress = document.querySelector("#progress");
     const progressBubble = document.querySelector("#progressBubble");
+    const progressBar = document.querySelector(".progress-bar");
+    const progressThumb = document.querySelector(".progress-thumb");
     const themeButtons = document.querySelectorAll(".theme-btn");
     const trackTitle = document.querySelector("#trackTitle");
     const trackMeta = document.querySelector("#trackMeta");
@@ -1369,13 +1997,33 @@
     const durationEl = document.querySelector("#duration");
     const statusText = document.querySelector("#statusText");
     const trackList = document.querySelector("#trackList");
+    if (trackList && !document.querySelector("#playlistStrip")) {
+      trackList.insertAdjacentHTML("beforebegin", '<div class="playlist-strip" id="playlistStrip" aria-label="Плейлисты"></div>');
+    }
+    const playlistStrip = document.querySelector("#playlistStrip");
     const fallbackText = document.querySelector("#fallbackText");
     const canvas = document.querySelector("#stage");
+    const adminFab = document.querySelector("#adminFab");
+    const adminOverlay = document.querySelector("#adminOverlay");
+    const adminBackdrop = document.querySelector("#adminBackdrop");
+    const adminClose = document.querySelector("#adminClose");
+    const adminPassForm = document.querySelector("#adminPassForm");
+    const adminPassInput = document.querySelector("#adminPassInput");
+    const adminError = document.querySelector("#adminError");
+    const adminGate = document.querySelector("#adminGate");
+    const adminDashboard = document.querySelector("#adminDashboard");
+    const refreshMetricsBtn = document.querySelector("#refreshMetricsBtn");
+    const metricsGrid = document.querySelector("#metricsGrid");
+    const playlistNameInput = document.querySelector("#playlistNameInput");
+    const savePlaylistBtn = document.querySelector("#savePlaylistBtn");
+    const clearPlaylistDraftBtn = document.querySelector("#clearPlaylistDraftBtn");
+    const adminTrackPicker = document.querySelector("#adminTrackPicker");
+    const adminPlaylists = document.querySelector("#adminPlaylists");
+    const adminLogList = document.querySelector("#adminLogList");
+    const firebaseStatus = document.querySelector("#firebaseStatus");
+    const sessionStatus = document.querySelector("#sessionStatus");
+    body.classList.toggle("is-lite-visualizer", useLiteVisualizer);
 
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const isMobile = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
-    const MOBILE_FRAME_MIN = 1000 / 60;
-    const MOBILE_PIXEL_RATIO = .68;
     let audioContext;
     let analyser;
     let source;
@@ -1402,20 +2050,62 @@
     let themeInkColor;
     let applyThemeToScene = () => {};
     let audioGraphEnabled = false;
+    let lastAudioSampleTime = 0;
+    let isSeeking = false;
+    let uiRafId = 0;
+    let volumeRafId = 0;
+    let fadeToken = 0;
+    const BASE_VOLUME = 0.9;
+    const FADE_IN_MS = 320;
+    const FADE_OUT_MS = 220;
+    const TRACK_SWITCH_FADE_OUT_MS = 180;
+    const TRACK_SWITCH_FADE_IN_MS = 340;
     const AUTH_STORAGE_KEY = "venus-music-unlocked";
+    const PLAYLIST_STORAGE_KEY = "venus-music-playlists";
+    const ADMIN_UNLOCK_STORAGE_KEY = "venus-admin-unlocked";
+    const SESSION_STORAGE_KEY = "venus-session-id";
+    const LOG_STORAGE_KEY = "venus-admin-logs";
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyBTcH3_tri2L7AHLh1e-YD-0s-QSthuE6Q",
+      authDomain: "disk-c98ee.firebaseapp.com",
+      databaseURL: "https://disk-c98ee-default-rtdb.firebaseio.com",
+      projectId: "disk-c98ee",
+      storageBucket: "disk-c98ee.firebasestorage.app",
+      messagingSenderId: "59577059636",
+      appId: "1:59577059636:web:e98f456d054cc360747d61"
+    };
 
-    audio.volume = 0.9;
+    let firebaseDb = null;
+    let firebaseApi = null;
+    let firebaseReady = false;
+    let firebaseInitStarted = false;
+    let activePlaylistId = "all";
+    let playlists = [];
+    let playlistDraft = new Set();
+    let adminLogs = [];
+    let metricsSnapshot = {};
+    let adminUnlocked = storageGet(ADMIN_UNLOCK_STORAGE_KEY) === "1";
+    let sessionId = storageGet(SESSION_STORAGE_KEY) || `sess-${Math.random().toString(36).slice(2, 10)}`;
+    storageSet(SESSION_STORAGE_KEY, sessionId);
+
+    audio.volume = BASE_VOLUME;
     discoverTracks();
     updateModeButton();
     restoreUnlockState();
+    startUiLoop();
+    hydrateAdminState();
+    initBackend();
+    collectMetrics();
+    logEvent("site_enter", { loadHintMs: Math.round(performance.now()) });
 
     function setupAudioGraph() {
-      if (audioContext || isMobile) return;
+      if (!ENABLE_VISUALIZER) return;
+      if (audioContext) return;
 
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       analyser = audioContext.createAnalyser();
-      analyser.fftSize = 1024;
-      analyser.smoothingTimeConstant = 0.82;
+      analyser.fftSize = useLiteVisualizer ? 256 : 1024;
+      analyser.smoothingTimeConstant = useLiteVisualizer ? 0.76 : 0.82;
       frequencyData = new Uint8Array(analyser.frequencyBinCount);
       source = audioContext.createMediaElementSource(audio);
       source.connect(analyser);
@@ -1439,12 +2129,315 @@
       }
     }
 
+    function generateId(prefix = "id") {
+      return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    async function measureSitePing() {
+      if (!window.fetch || !window.AbortController) return 0;
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+      const pingUrl = window.location.protocol.startsWith("http")
+        ? new URL(window.location.pathname || "/", window.location.origin)
+        : new URL("index.html", window.location.href);
+      pingUrl.searchParams.set("ping", `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+      try {
+        const startedAt = performance.now();
+        await fetch(pingUrl.href, {
+          method: "HEAD",
+          cache: "no-store",
+          credentials: "same-origin",
+          signal: controller.signal
+        });
+        return Math.max(1, Math.round(performance.now() - startedAt));
+      } catch (error) {
+        return 0;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
+    async function collectMetrics() {
+      const navigationEntry = performance.getEntriesByType("navigation")[0];
+      const pingMs = await measureSitePing();
+      metricsSnapshot = {
+        loadMs: Math.round(navigationEntry?.domComplete || performance.now()),
+        pingMs,
+        pageKb: Math.round((navigationEntry?.transferSize || 0) / 1024),
+        domNodes: document.querySelectorAll("*").length,
+        viewport: `${window.innerWidth}x${window.innerHeight}`
+      };
+      renderMetrics();
+      return metricsSnapshot;
+    }
+
+    function renderMetrics() {
+      if (!metricsGrid) return;
+      const items = [
+        ["Load", metricsSnapshot.loadMs ? `${metricsSnapshot.loadMs} ms` : "n/a"],
+        ["Ping", metricsSnapshot.pingMs ? `${metricsSnapshot.pingMs} ms` : "n/a"],
+        ["Page", metricsSnapshot.pageKb ? `${metricsSnapshot.pageKb} KB` : "cache"],
+        ["DOM", metricsSnapshot.domNodes ? `${metricsSnapshot.domNodes}` : "n/a"],
+        ["Viewport", metricsSnapshot.viewport || "n/a"]
+      ];
+      metricsGrid.innerHTML = items.map(([label, value]) => `
+        <article class="metric-pill">
+          <p class="metric-label">${label}</p>
+          <p class="metric-value">${value}</p>
+        </article>
+      `).join("");
+    }
+
+    function getVisibleTrackIndexes() {
+      if (activePlaylistId === "all") return tracks.map((_, index) => index);
+      const playlist = playlists.find((item) => item.id === activePlaylistId);
+      if (!playlist) return tracks.map((_, index) => index);
+      const allowed = new Set(playlist.tracks || []);
+      return tracks
+        .map((track, index) => allowed.has(track.file) ? index : -1)
+        .filter((index) => index >= 0);
+    }
+
+    function getVisibleTracks() {
+      return getVisibleTrackIndexes().map((index) => ({ track: tracks[index], index }));
+    }
+
+    function renderPlaylistStrip() {
+      if (!playlistStrip) return;
+      const chips = [{ id: "all", name: "all tracks" }, ...playlists];
+      playlistStrip.innerHTML = chips.map((playlist) => `
+        <button class="playlist-chip${playlist.id === activePlaylistId ? " is-active" : ""}" type="button" data-playlist-id="${playlist.id}">
+          ${playlist.name}
+        </button>
+      `).join("");
+
+      playlistStrip.querySelectorAll("[data-playlist-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activePlaylistId = button.dataset.playlistId || "all";
+          renderPlaylistStrip();
+          renderPlaylist();
+          logEvent("playlist_filter", { playlistId: activePlaylistId });
+        });
+      });
+    }
+
+    function persistPlaylistsLocal() {
+      storageSet(PLAYLIST_STORAGE_KEY, JSON.stringify(playlists));
+    }
+
+    async function persistPlaylistsRemote() {
+      if (!firebaseReady || !firebaseDb || !firebaseApi) return;
+      try {
+        await firebaseApi.set(firebaseApi.ref(firebaseDb, "venus_music/playlists"), playlists);
+      } catch (error) {
+        console.warn("Playlist sync failed.", error);
+      }
+    }
+
+    async function savePlaylists() {
+      persistPlaylistsLocal();
+      renderPlaylistStrip();
+      renderAdminPlaylists();
+      renderPlaylist();
+      await persistPlaylistsRemote();
+    }
+
+    function renderTrackPicker() {
+      if (!adminTrackPicker) return;
+      adminTrackPicker.innerHTML = tracks.map((track) => {
+        const selected = playlistDraft.has(track.file);
+        return `
+          <article class="picker-row${selected ? " is-selected" : ""}">
+            <div>
+              <strong>${track.title}</strong>
+              <div class="picker-meta">${track.file}</div>
+            </div>
+            <button class="picker-toggle" type="button" data-track-file="${track.file}">
+              ${selected ? "убрать" : "добавить"}
+            </button>
+          </article>
+        `;
+      }).join("");
+
+      adminTrackPicker.querySelectorAll("[data-track-file]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const file = button.dataset.trackFile || "";
+          if (playlistDraft.has(file)) {
+            playlistDraft.delete(file);
+          } else {
+            playlistDraft.add(file);
+          }
+          renderTrackPicker();
+        });
+      });
+    }
+
+    function renderAdminPlaylists() {
+      if (!adminPlaylists) return;
+      if (!playlists.length) {
+        adminPlaylists.innerHTML = '<div class="admin-log-meta">Плейлистов пока нет.</div>';
+        return;
+      }
+
+      adminPlaylists.innerHTML = playlists.map((playlist) => `
+        <article class="admin-playlist-row">
+          <div>
+            <strong>${playlist.name}</strong>
+            <div class="picker-meta">${playlist.tracks.length} треков</div>
+          </div>
+          <div class="admin-row-actions">
+            <button class="admin-row-btn" type="button" data-playlist-open="${playlist.id}">open</button>
+            <button class="admin-row-btn" type="button" data-playlist-delete="${playlist.id}">delete</button>
+          </div>
+        </article>
+      `).join("");
+
+      adminPlaylists.querySelectorAll("[data-playlist-open]").forEach((button) => {
+        button.addEventListener("click", () => {
+          activePlaylistId = button.dataset.playlistOpen || "all";
+          renderPlaylistStrip();
+          renderPlaylist();
+          logEvent("playlist_open", { playlistId: activePlaylistId });
+        });
+      });
+
+      adminPlaylists.querySelectorAll("[data-playlist-delete]").forEach((button) => {
+        button.addEventListener("click", async () => {
+          const playlistId = button.dataset.playlistDelete || "";
+          playlists = playlists.filter((item) => item.id !== playlistId);
+          if (activePlaylistId === playlistId) activePlaylistId = "all";
+          await savePlaylists();
+          logEvent("playlist_delete", { playlistId });
+        });
+      });
+    }
+
+    function renderLogs() {
+      if (!adminLogList) return;
+      const items = [...adminLogs].slice(-40).reverse();
+      adminLogList.innerHTML = items.length
+        ? items.map((entry) => `
+            <article class="admin-log-row">
+              <div>
+                <strong>${entry.action}</strong>
+                <div class="admin-log-meta">${entry.timeLabel} • ${entry.detailsText}</div>
+              </div>
+              <span class="admin-log-meta">${entry.sessionId}</span>
+            </article>
+          `).join("")
+        : '<div class="admin-log-meta">Логи пока пустые.</div>';
+    }
+
+    async function syncLogsRemote(entry) {
+      if (!firebaseReady || !firebaseDb || !firebaseApi) return;
+      try {
+        await firebaseApi.push(firebaseApi.ref(firebaseDb, "venus_music/logs"), entry);
+      } catch (error) {
+        console.warn("Log sync failed.", error);
+      }
+    }
+
+    function logEvent(action, details = {}) {
+      const entry = {
+        id: generateId("log"),
+        action,
+        details,
+        detailsText: Object.entries(details).map(([key, value]) => `${key}: ${value}`).join(" • ") || "no details",
+        sessionId,
+        timestamp: Date.now(),
+        timeLabel: new Date().toLocaleString("ru-RU"),
+        track: tracks[trackIndex]?.title || "",
+        viewport: `${window.innerWidth}x${window.innerHeight}`
+      };
+      adminLogs = [...adminLogs, entry].slice(-160);
+      storageSet(LOG_STORAGE_KEY, JSON.stringify(adminLogs));
+      renderLogs();
+      syncLogsRemote(entry);
+    }
+
+    async function initBackend() {
+      if (firebaseInitStarted) return;
+      firebaseInitStarted = true;
+      try {
+        const [{ initializeApp }, databaseModule] = await Promise.all([
+          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
+          import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")
+        ]);
+        const app = initializeApp(FIREBASE_CONFIG);
+        firebaseDb = databaseModule.getDatabase(app);
+        firebaseApi = databaseModule;
+        firebaseReady = true;
+        if (firebaseStatus) firebaseStatus.textContent = "Firebase: connected";
+
+        databaseModule.onValue(databaseModule.ref(firebaseDb, "venus_music/playlists"), (snapshot) => {
+          const value = snapshot.val();
+          if (value) {
+            playlists = Array.isArray(value) ? value : Object.values(value);
+            persistPlaylistsLocal();
+            renderPlaylistStrip();
+            renderAdminPlaylists();
+            renderTrackPicker();
+            renderPlaylist();
+          }
+        });
+
+        databaseModule.onValue(databaseModule.ref(firebaseDb, "venus_music/logs"), (snapshot) => {
+          const value = snapshot.val();
+          if (!value) return;
+          adminLogs = Object.values(value).slice(-160).map((entry) => ({
+            ...entry,
+            detailsText: entry.detailsText || Object.entries(entry.details || {}).map(([key, val]) => `${key}: ${val}`).join(" • ")
+          }));
+          renderLogs();
+        });
+
+        await persistPlaylistsRemote();
+      } catch (error) {
+        console.warn("Firebase unavailable, using local admin storage.", error);
+        firebaseReady = false;
+        if (firebaseStatus) firebaseStatus.textContent = "Firebase: local mode";
+      }
+    }
+
+    function hydrateAdminState() {
+      playlists = JSON.parse(storageGet(PLAYLIST_STORAGE_KEY) || "[]");
+      adminLogs = JSON.parse(storageGet(LOG_STORAGE_KEY) || "[]");
+      if (!Array.isArray(playlists)) playlists = [];
+      if (!Array.isArray(adminLogs)) adminLogs = [];
+      if (sessionStatus) sessionStatus.textContent = `Session: ${sessionId}`;
+      if (adminUnlocked) {
+        adminGate.hidden = true;
+        adminDashboard.hidden = false;
+      }
+      renderMetrics();
+      renderTrackPicker();
+      renderAdminPlaylists();
+      renderPlaylistStrip();
+      renderLogs();
+    }
+
+    function openAdmin() {
+      adminOverlay.hidden = false;
+      if (!adminUnlocked) {
+        adminPassInput.focus();
+      } else {
+        void collectMetrics();
+      }
+      logEvent("admin_open");
+    }
+
+    function closeAdmin() {
+      adminOverlay.hidden = true;
+    }
+
     function unlockSite(remember = false) {
       if (remember) storageSet(AUTH_STORAGE_KEY, "1");
       lockError.classList.remove("is-visible");
       body.classList.remove("is-locked");
       lockScreen.classList.add("is-unlocked");
       resetIdleTimer();
+      logEvent("site_unlock", { remembered: remember });
     }
 
     function restoreUnlockState() {
@@ -1470,16 +2463,65 @@
       passwordInput.select();
     });
 
-    async function togglePlayback() {
-      setupAudioGraph();
-      if (audioContext && audioContext.state === "suspended") {
-        await audioContext.resume();
-      }
+    adminFab.addEventListener("click", openAdmin);
+    adminClose.addEventListener("click", closeAdmin);
+    adminBackdrop.addEventListener("click", closeAdmin);
 
+    adminPassForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (adminPassInput.value.trim() === "771") {
+        adminUnlocked = true;
+        storageSet(ADMIN_UNLOCK_STORAGE_KEY, "1");
+        adminError.classList.remove("is-visible");
+        adminGate.hidden = true;
+        adminDashboard.hidden = false;
+        renderTrackPicker();
+        renderAdminPlaylists();
+        void collectMetrics();
+        renderLogs();
+        logEvent("admin_unlock");
+        return;
+      }
+      adminError.classList.add("is-visible");
+      adminPassInput.select();
+    });
+
+    refreshMetricsBtn.addEventListener("click", async () => {
+      const snapshot = await collectMetrics();
+      logEvent("metrics_refresh", snapshot);
+    });
+
+    clearPlaylistDraftBtn.addEventListener("click", () => {
+      playlistDraft.clear();
+      playlistNameInput.value = "";
+      renderTrackPicker();
+    });
+
+    savePlaylistBtn.addEventListener("click", async () => {
+      const name = playlistNameInput.value.trim();
+      if (!name || !playlistDraft.size) return;
+      const playlist = {
+        id: generateId("playlist"),
+        name,
+        tracks: [...playlistDraft]
+      };
+      playlists = [...playlists, playlist];
+      playlistDraft.clear();
+      playlistNameInput.value = "";
+      await savePlaylists();
+      renderTrackPicker();
+      activePlaylistId = playlist.id;
+      renderPlaylistStrip();
+      logEvent("playlist_create", { playlist: name, tracks: playlist.tracks.length });
+    });
+
+    async function togglePlayback() {
       if (audio.paused) {
-        await audio.play();
+        await playWithFade();
+        logEvent("play");
       } else {
-        audio.pause();
+        await pauseWithFade();
+        logEvent("pause");
       }
     }
 
@@ -1497,10 +2539,11 @@
       displayProgress = 0;
       root.style.setProperty("--progress", "0");
       root.style.setProperty("--display-progress", "0");
+      renderProgressVisual(0);
       updatePlaylistState();
 
       if (autoplay) {
-        togglePlayback().catch(() => {
+        playWithFade().catch(() => {
           statusText.textContent = "Нажми play для запуска";
         });
       }
@@ -1536,6 +2579,8 @@
         if (discovered.length) {
           tracks = discovered;
           loadTrack(0, false);
+          renderTrackPicker();
+          renderPlaylistStrip();
         } else {
           trackTitle.textContent = "no music";
           trackMeta.textContent = "add mp3 or m4a";
@@ -1568,17 +2613,28 @@
 
     function renderPlaylist() {
       trackList.innerHTML = "";
+      const visibleTracks = getVisibleTracks();
+      if (!visibleTracks.length) {
+        trackList.innerHTML = '<div class="admin-log-meta">В этом плейлисте пока нет треков.</div>';
+        updatePlaylistState();
+        return;
+      }
 
-      tracks.forEach((track, index) => {
+      visibleTracks.forEach(({ track, index }) => {
         const button = document.createElement("button");
         button.className = "track-button";
         button.type = "button";
+        button.dataset.trackIndex = String(index);
         button.innerHTML = `
           <span class="track-index">${String(index + 1).padStart(2, "0")}</span>
           <span class="track-name">${shortTitle(track.title)}</span>
           <span class="track-badge">play</span>
         `;
-        button.addEventListener("click", () => loadTrack(index, true));
+        button.addEventListener("click", () => {
+          switchTrackWithFade(index).catch(() => {
+            statusText.textContent = "track switch error";
+          });
+        });
         trackList.append(button);
       });
 
@@ -1586,8 +2642,8 @@
     }
 
     function updatePlaylistState() {
-      [...trackList.children].forEach((button, index) => {
-        button.classList.toggle("is-active", index === trackIndex);
+      [...trackList.children].forEach((button) => {
+        button.classList.toggle("is-active", Number(button.dataset.trackIndex) === trackIndex);
       });
     }
 
@@ -1661,6 +2717,10 @@
     function updatePlayState() {
       const isPlaying = !audio.paused;
       body.classList.toggle("is-playing", isPlaying);
+      if (!isPlaying) {
+        smoothBass = 0;
+        root.style.setProperty("--bass", "0");
+      }
       playBtn.setAttribute("aria-label", isPlaying ? "Пауза" : "Воспроизвести");
       playIcon.innerHTML = isPlaying
         ? '<path d="M7 5h4v14H7V5Zm6 0h4v14h-4V5Z"/>'
@@ -1709,17 +2769,14 @@
     if ("mediaSession" in navigator) {
       setMediaAction("play", () => {
         if (audio.paused) {
-          if (audioContext && audioContext.state === "suspended") {
-            audioContext.resume().catch(() => {});
-          }
-          audio.play().catch(() => {});
+          playWithFade().catch(() => {});
         }
       });
       setMediaAction("pause", () => {
-        if (!audio.paused) audio.pause();
+        if (!audio.paused) pauseWithFade().catch(() => {});
       });
-      setMediaAction("previoustrack", () => playNext(-1));
-      setMediaAction("nexttrack", () => playNext(1));
+      setMediaAction("previoustrack", () => switchTrackWithFade(nextTrackIndex(-1)).catch(() => {}));
+      setMediaAction("nexttrack", () => switchTrackWithFade(nextTrackIndex(1)).catch(() => {}));
       setMediaAction("seekbackward", () => {
         if (Number.isFinite(audio.duration)) audio.currentTime = Math.max(0, audio.currentTime - 10);
       });
@@ -1751,20 +2808,24 @@
     }
 
     function nextTrackIndex(direction = 1) {
-      if (!tracks.length) return 0;
+      const visibleIndexes = getVisibleTrackIndexes();
+      if (!visibleIndexes.length) return 0;
       if (playMode === "repeat") return trackIndex;
-      if (playMode === "random" && tracks.length > 1) {
+      if (playMode === "random" && visibleIndexes.length > 1) {
         let next = trackIndex;
         while (next === trackIndex) {
-          next = Math.floor(Math.random() * tracks.length);
+          next = visibleIndexes[Math.floor(Math.random() * visibleIndexes.length)];
         }
         return next;
       }
-      return (trackIndex + direction + tracks.length) % tracks.length;
+      const currentVisibleIndex = Math.max(0, visibleIndexes.indexOf(trackIndex));
+      return visibleIndexes[(currentVisibleIndex + direction + visibleIndexes.length) % visibleIndexes.length];
     }
 
     function playNext(direction = 1) {
-      loadTrack(nextTrackIndex(direction), !audio.paused);
+      switchTrackWithFade(nextTrackIndex(direction)).catch(() => {
+        statusText.textContent = "track switch error";
+      });
     }
 
     function formatTime(value) {
@@ -1778,7 +2839,116 @@
       if (!Number.isFinite(audio.duration)) return;
       const rect = progress.getBoundingClientRect();
       const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      targetProgress = ratio;
       audio.currentTime = ratio * audio.duration;
+    }
+
+    function renderProgressVisual(ratio = 0) {
+      const clamped = Math.min(1, Math.max(0, ratio));
+      const percent = `${(clamped * 100).toFixed(3)}%`;
+      if (progressBar) progressBar.style.width = percent;
+      if (progressThumb) progressThumb.style.left = percent;
+      if (progressBubble) progressBubble.style.left = percent;
+    }
+
+    function startUiLoop() {
+      if (uiRafId) return;
+      let lastUiRender = 0;
+
+      const tick = (now = 0) => {
+        uiRafId = requestAnimationFrame(tick);
+        if (UI_FRAME_MIN && now - lastUiRender < UI_FRAME_MIN) return;
+        lastUiRender = now;
+        const smoothing = isSeeking ? .18 : .12;
+        displayProgress += (targetProgress - displayProgress) * smoothing;
+        if (Math.abs(targetProgress - displayProgress) < 0.0005) {
+          displayProgress = targetProgress;
+        }
+        renderProgressVisual(displayProgress);
+      };
+
+      uiRafId = requestAnimationFrame(tick);
+    }
+
+    function stopVolumeFade() {
+      fadeToken += 1;
+      if (volumeRafId) {
+        cancelAnimationFrame(volumeRafId);
+        volumeRafId = 0;
+      }
+      return fadeToken;
+    }
+
+    function fadeAudioVolume(target, duration = 260) {
+      const token = stopVolumeFade();
+      const startVolume = audio.volume;
+      const endVolume = Math.min(BASE_VOLUME, Math.max(0, target));
+      if (duration <= 0 || Math.abs(endVolume - startVolume) < 0.001) {
+        audio.volume = endVolume;
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        const startedAt = performance.now();
+
+        const step = (now) => {
+          if (token !== fadeToken) {
+            resolve();
+            return;
+          }
+
+          const progress = Math.min(1, (now - startedAt) / duration);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          audio.volume = startVolume + (endVolume - startVolume) * eased;
+
+          if (progress >= 1) {
+            volumeRafId = 0;
+            audio.volume = endVolume;
+            resolve();
+            return;
+          }
+
+          volumeRafId = requestAnimationFrame(step);
+        };
+
+        volumeRafId = requestAnimationFrame(step);
+      });
+    }
+
+    async function playWithFade(duration = FADE_IN_MS) {
+      setupAudioGraph();
+      if (audioContext && audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      stopVolumeFade();
+      audio.volume = 0;
+      await audio.play();
+      await fadeAudioVolume(BASE_VOLUME, duration);
+    }
+
+    async function pauseWithFade(duration = FADE_OUT_MS) {
+      if (audio.paused) return;
+      await fadeAudioVolume(0, duration);
+      audio.pause();
+      audio.volume = BASE_VOLUME;
+    }
+
+    async function switchTrackWithFade(index) {
+      const shouldResume = !audio.paused;
+      const wasSameTrack = tracks.length && ((index + tracks.length) % tracks.length) === trackIndex;
+
+      if (shouldResume && !wasSameTrack) {
+        await fadeAudioVolume(0, TRACK_SWITCH_FADE_OUT_MS);
+        audio.pause();
+      }
+
+      loadTrack(index, false);
+
+      if (shouldResume) {
+        await playWithFade(TRACK_SWITCH_FADE_IN_MS);
+      }
+      logEvent("track_switch", { to: tracks[trackIndex]?.title || "", autoplay: shouldResume });
     }
 
     playBtn.addEventListener("click", () => {
@@ -1793,6 +2963,7 @@
       playMode = playMode === "normal" ? "random" : playMode === "random" ? "repeat" : "normal";
       updateModeButton();
       resetIdleTimer();
+      logEvent("mode_change", { mode: playMode });
     });
 
     function closeMenus() {
@@ -1809,8 +2980,21 @@
       idleTimer = window.setTimeout(closeMenus, 10000);
     }
 
+    let lastIdleReset = 0;
+    function resetIdleTimerThrottled(event) {
+      if (!isMobile || event.type !== "pointermove") {
+        resetIdleTimer();
+        return;
+      }
+
+      const now = performance.now();
+      if (now - lastIdleReset < 900) return;
+      lastIdleReset = now;
+      resetIdleTimer();
+    }
+
     ["pointerdown", "pointermove", "keydown", "wheel"].forEach((eventName) => {
-      window.addEventListener(eventName, resetIdleTimer, { passive: true });
+      window.addEventListener(eventName, resetIdleTimerThrottled, { passive: true });
     });
 
     resetIdleTimer();
@@ -1839,12 +3023,33 @@
     });
 
     progress.addEventListener("pointerdown", (event) => {
+      isSeeking = true;
       progress.setPointerCapture(event.pointerId);
       seekFromClientX(event.clientX);
+      resetIdleTimer();
     });
 
     progress.addEventListener("pointermove", (event) => {
-      if (event.buttons === 1) seekFromClientX(event.clientX);
+      if (isSeeking) {
+        seekFromClientX(event.clientX);
+        resetIdleTimer();
+      }
+    });
+
+    progress.addEventListener("pointerup", (event) => {
+      if (!isSeeking) return;
+      isSeeking = false;
+      seekFromClientX(event.clientX);
+      if (progress.hasPointerCapture(event.pointerId)) {
+        progress.releasePointerCapture(event.pointerId);
+      }
+    });
+
+    progress.addEventListener("pointercancel", (event) => {
+      isSeeking = false;
+      if (progress.hasPointerCapture(event.pointerId)) {
+        progress.releasePointerCapture(event.pointerId);
+      }
     });
 
     progress.addEventListener("keydown", (event) => {
@@ -1861,9 +3066,9 @@
     audio.addEventListener("ended", () => {
       if (playMode === "repeat") {
         audio.currentTime = 0;
-        audio.play();
+        playWithFade().catch(() => {});
       } else {
-        loadTrack(nextTrackIndex(1), tracks.length > 1);
+        switchTrackWithFade(nextTrackIndex(1)).catch(() => {});
       }
     });
     audio.addEventListener("loadedmetadata", () => {
@@ -1887,14 +3092,22 @@
       }
     });
 
-    window.addEventListener("pointermove", (event) => {
-      const x = event.clientX / window.innerWidth - 0.5;
-      const y = event.clientY / window.innerHeight - 0.5;
-      targetTiltX = y * 0.16;
-      targetTiltY = x * 0.22;
-    }, { passive: true });
+    if (!useLiteVisualizer) {
+      window.addEventListener("pointermove", (event) => {
+        const x = event.clientX / window.innerWidth - 0.5;
+        const y = event.clientY / window.innerHeight - 0.5;
+        targetTiltX = y * 0.16;
+        targetTiltY = x * 0.22;
+      }, { passive: true });
+    }
 
-    if (THREE) {
+    if (isMobile) {
+      document.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+      });
+    }
+
+    if (ENABLE_VISUALIZER && THREE) {
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: !isMobile,
@@ -1902,7 +3115,7 @@
       powerPreference: isMobile ? "low-power" : "high-performance"
     });
 
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? MOBILE_PIXEL_RATIO : 1.75));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? MOBILE_PIXEL_RATIO : DESKTOP_PIXEL_RATIO));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
@@ -2158,7 +3371,7 @@
     window.addEventListener("resize", resize, { passive: true });
     resize();
 
-    function sampleAudio() {
+    function sampleAudio(now = 0) {
       if (!audioGraphEnabled || !analyser || !frequencyData || audio.paused) {
         bassLevel *= .9;
         midLevel *= .92;
@@ -2166,10 +3379,16 @@
         return;
       }
 
+      if (now - lastAudioSampleTime < AUDIO_SAMPLE_MIN) return;
+      lastAudioSampleTime = now;
+
       analyser.getByteFrequencyData(frequencyData);
-      const bassBins = frequencyData.slice(1, 14);
-      const midBins = frequencyData.slice(14, 72);
-      const trebleBins = frequencyData.slice(72, 180);
+      const bassEnd = Math.min(frequencyData.length, useLiteVisualizer ? 10 : 14);
+      const midEnd = Math.min(frequencyData.length, useLiteVisualizer ? 38 : 72);
+      const trebleEnd = Math.min(frequencyData.length, useLiteVisualizer ? 96 : 180);
+      const bassBins = frequencyData.slice(1, bassEnd);
+      const midBins = frequencyData.slice(bassEnd, midEnd);
+      const trebleBins = frequencyData.slice(midEnd, trebleEnd);
       bassLevel = average(bassBins) / 255;
       midLevel = average(midBins) / 255;
       trebleLevel = average(trebleBins) / 255;
@@ -2191,15 +3410,16 @@
 
       const delta = Math.min(clock.getDelta(), isMobile ? .04 : .033);
       const elapsed = clock.elapsedTime;
-      sampleAudio();
+      sampleAudio(now);
 
       smoothBass += (bassLevel - smoothBass) * (audio.paused ? .06 : .2);
       displayProgress += (targetProgress - displayProgress) * .14;
       root.style.setProperty("--bass", smoothBass.toFixed(3));
       root.style.setProperty("--display-progress", displayProgress.toFixed(4));
+      renderProgressVisual(displayProgress);
 
-      tiltX += (targetTiltX - tiltX) * .05;
-      tiltY += (targetTiltY - tiltY) * .05;
+      tiltX += (targetTiltX - tiltX) * (useLiteVisualizer ? .02 : .05);
+      tiltY += (targetTiltY - tiltY) * (useLiteVisualizer ? .02 : .05);
       const targetMotion = audio.paused ? .08 : 1;
       motionSpeed += (targetMotion - motionSpeed) * .045;
 
@@ -2324,35 +3544,39 @@
 
     animate();
     } else {
-      fallbackText.style.display = "block";
-      startCanvasFallback();
+      canvas.setAttribute("hidden", "hidden");
     }
 
     function startCanvasFallback() {
-      const context = canvas.getContext("2d");
+      const context = canvas.getContext("2d", { alpha: true, desynchronized: true });
       if (!context) return;
 
       const fallbackClock = { time: 0 };
       let fallbackTurntableAngle = 0;
       let fallbackTurntableSpeed = 0.08;
       let lastFallbackRender = 0;
-      const fallbackOrbs = Array.from({ length: isMobile ? 3 : 44 }, () => ({
+      const fallbackOrbs = Array.from({ length: useLiteVisualizer ? 10 : 44 }, () => ({
         angle: Math.random() * Math.PI * 2,
         radius: .42 + Math.random() * .52,
-        size: 4 + Math.random() * 18,
+        size: useLiteVisualizer ? 4 + Math.random() * 9 : 4 + Math.random() * 18,
         speed: .15 + Math.random() * .45,
         alpha: .18 + Math.random() * .38
+      }));
+      const mobileBars = Array.from({ length: isLowPowerMobile ? 12 : 16 }, (_, index) => ({
+        x: index / 24,
+        phase: Math.random() * Math.PI * 2,
+        weight: .65 + Math.random() * .7
       }));
 
       function resizeFallback() {
         const rect = canvas.getBoundingClientRect();
-        const ratio = Math.min(window.devicePixelRatio || 1, isMobile ? MOBILE_PIXEL_RATIO : 1.75);
+        const ratio = Math.min(window.devicePixelRatio || 1, isMobile ? MOBILE_PIXEL_RATIO : DESKTOP_PIXEL_RATIO);
         canvas.width = Math.max(1, Math.floor(rect.width * ratio));
         canvas.height = Math.max(1, Math.floor(rect.height * ratio));
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
       }
 
-      function fallbackAudioLevels() {
+      function fallbackAudioLevels(now = 0) {
         if (!analyser || !frequencyData || audio.paused) {
           bassLevel *= .9;
           midLevel *= .92;
@@ -2360,10 +3584,13 @@
           return;
         }
 
+        if (now - lastAudioSampleTime < AUDIO_SAMPLE_MIN) return;
+        lastAudioSampleTime = now;
+
         analyser.getByteFrequencyData(frequencyData);
-        bassLevel = fallbackAverage(1, 14) / 255;
-        midLevel = fallbackAverage(14, 72) / 255;
-        trebleLevel = fallbackAverage(72, 180) / 255;
+        bassLevel = fallbackAverage(1, useLiteVisualizer ? 10 : 14) / 255;
+        midLevel = fallbackAverage(useLiteVisualizer ? 10 : 14, useLiteVisualizer ? 38 : 72) / 255;
+        trebleLevel = fallbackAverage(useLiteVisualizer ? 38 : 72, useLiteVisualizer ? 96 : 180) / 255;
       }
 
       function fallbackAverage(start, end) {
@@ -2380,12 +3607,13 @@
         requestAnimationFrame(drawFallback);
         if (isMobile && now - lastFallbackRender < MOBILE_FRAME_MIN) return;
         lastFallbackRender = now;
-        fallbackClock.time += isMobile ? .022 : .016;
-        fallbackAudioLevels();
-        smoothBass += (bassLevel - smoothBass) * .16;
+        fallbackClock.time += useLiteVisualizer ? .018 : .016;
+        fallbackAudioLevels(now);
+        smoothBass += (bassLevel - smoothBass) * (useLiteVisualizer ? .2 : .16);
         displayProgress += (targetProgress - displayProgress) * .14;
         root.style.setProperty("--bass", smoothBass.toFixed(3));
         root.style.setProperty("--display-progress", displayProgress.toFixed(4));
+        renderProgressVisual(displayProgress);
 
         const rect = canvas.getBoundingClientRect();
         const width = rect.width;
@@ -2395,6 +3623,83 @@
         const radius = Math.min(width, height) * (.28 + smoothBass * .035);
 
         context.clearRect(0, 0, width, height);
+
+        if (useLiteVisualizer) {
+          context.save();
+          context.translate(cx, cy);
+          const fallbackTargetSpeed = audio.paused ? 0 : .7 + smoothBass * .22;
+          fallbackTurntableSpeed += (fallbackTargetSpeed - fallbackTurntableSpeed) * (audio.paused ? .028 : .04);
+          if (audio.paused && fallbackTurntableSpeed < .002) fallbackTurntableSpeed = 0;
+          fallbackTurntableAngle += fallbackTurntableSpeed * .016;
+          context.rotate(fallbackTurntableAngle);
+
+          const discGradient = context.createRadialGradient(0, 0, radius * .1, 0, 0, radius);
+          discGradient.addColorStop(0, "#ffd166");
+          discGradient.addColorStop(.2, "#ff4f7b");
+          discGradient.addColorStop(.22, "#10131d");
+          discGradient.addColorStop(.74, "#07080d");
+          discGradient.addColorStop(1, "#5ee7df");
+
+          context.fillStyle = discGradient;
+          context.beginPath();
+          context.arc(0, 0, radius, 0, Math.PI * 2);
+          context.fill();
+
+          const mobileGrooveCount = isLowPowerMobile ? 9 : 12;
+          for (let index = 0; index < mobileGrooveCount; index += 1) {
+            context.strokeStyle = `rgba(255,255,255,${.03 + (index % 3 === 0 ? .05 : 0)})`;
+            context.lineWidth = 1;
+            context.beginPath();
+            context.arc(0, 0, radius * (.34 + index * .034), 0, Math.PI * 2);
+            context.stroke();
+          }
+
+          context.restore();
+
+          context.save();
+          context.globalCompositeOperation = "lighter";
+          const barBaseY = height * .83;
+          const barMaxHeight = Math.min(height * .22, 150);
+          const barWidth = Math.max(4, width / 52);
+          const barGap = Math.max(2, barWidth * .45);
+          const totalWidth = mobileBars.length * barWidth + (mobileBars.length - 1) * barGap;
+          let barX = cx - totalWidth / 2;
+
+          mobileBars.forEach((bar, index) => {
+            const bin = frequencyData
+              ? frequencyData[Math.min(frequencyData.length - 1, Math.floor((index / mobileBars.length) * frequencyData.length))]
+              : 0;
+            const amp = Math.max(bin / 255, smoothBass * .45, midLevel * .35 * bar.weight);
+            const pulse = .82 + Math.sin(fallbackClock.time * 4.2 + bar.phase) * .18;
+            const barHeight = Math.max(8, barMaxHeight * amp * pulse);
+            const barGradient = context.createLinearGradient(0, barBaseY - barHeight, 0, barBaseY);
+            barGradient.addColorStop(0, "rgba(94,231,223,.95)");
+            barGradient.addColorStop(.6, "rgba(255,255,255,.8)");
+            barGradient.addColorStop(1, "rgba(255,51,95,.92)");
+            context.fillStyle = barGradient;
+            context.fillRect(barX, barBaseY - barHeight, barWidth, barHeight);
+            barX += barWidth + barGap;
+          });
+
+          context.beginPath();
+          for (let x = -24; x <= width + 24; x += isLowPowerMobile ? 22 : 16) {
+            const t = x / width;
+            const y = height * .68
+              + Math.sin(t * Math.PI * 5 + fallbackClock.time * 2.8) * (12 + trebleLevel * 18)
+              + Math.sin(t * Math.PI * 10 - fallbackClock.time * 4.2) * (5 + smoothBass * 12);
+            if (x === -24) {
+              context.moveTo(x, y);
+            } else {
+              context.lineTo(x, y);
+            }
+          }
+          context.strokeStyle = `rgba(255,255,255,${.18 + smoothBass * .28})`;
+          context.lineWidth = 1.5 + smoothBass * 1.2;
+          context.stroke();
+          context.restore();
+          return;
+        }
+
         context.save();
         context.translate(cx, cy);
         const fallbackTargetSpeed = audio.paused ? 0 : 1 + smoothBass * (isMobile ? .16 : .32);
@@ -2485,7 +3790,7 @@
     }
 
     window.addEventListener("error", () => {
-      fallbackText.style.display = "block";
+      if (!useLiteVisualizer) fallbackText.style.display = "block";
     });
   </script>
 </body>
