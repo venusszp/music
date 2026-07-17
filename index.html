@@ -1523,8 +1523,6 @@ let bassBoostActive = false;
 let spatialAudioActive = false;
 
 function setupAudioContext() {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) return;
   try {
     if (!currentAudioCtx) {
       currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2332,7 +2330,12 @@ function restorePlayerState() {
 
 loadMusicFiles();
 
-// Background playback is natively handled by bypassing AudioContext routing on iOS devices.
+// Auto-resume AudioContext on tab focus/return (essential for iOS Safari and Chrome)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && currentAudioCtx && currentAudioCtx.state === 'suspended') {
+    currentAudioCtx.resume().catch(() => {});
+  }
+});
 </script>
 </body>
 </html>
