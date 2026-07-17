@@ -2125,13 +2125,15 @@ async function loadMusicFiles() {
   } catch(e) {}
   if (!success) {
     try {
-      const r = await fetch('music/');
+      const r = await fetch('./');
       const html = await r.text();
       const doc = new DOMParser().parseFromString(html, 'text/html');
       const files = [];
       doc.querySelectorAll('a').forEach(a => {
         const h = a.getAttribute('href');
-        if (h && exts.some(e => h.toLowerCase().endsWith('.' + e))) files.push('music/' + decodeURIComponent(h));
+        if (h && exts.some(e => h.toLowerCase().endsWith('.' + e))) {
+          files.push(decodeURIComponent(h));
+        }
       });
       if (files.length > 0) {
         songFiles = files;
@@ -2140,7 +2142,24 @@ async function loadMusicFiles() {
     } catch(e) {}
   }
   if (!success) {
-    const known = ['music/Assault - LONOWN   riserayss.m4a'];
+    const known = [
+      "music/1.m4a",
+      "music/2.m4a",
+      "music/4.m4a",
+      "music/5.m4a",
+      "music/6.mp3",
+      "music/7.mp3",
+      "music/8.mp3",
+      "music/9.mp3",
+      "music/10.mp3",
+      "music/11.mp3",
+      "music/12.m4a",
+      "music/13.m4a",
+      "music/14.m4a",
+      "music/15.mp3",
+      "music/16.m4a",
+      "music/17.m4a"
+    ];
     songFiles = known;
   }
   
