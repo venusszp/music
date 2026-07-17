@@ -1542,20 +1542,27 @@ function setupAudioContext() {
       bassFilter.frequency.value = 150;
       bassFilter.gain.value = bassBoostActive ? 12 : 0; // +12dB bass boost!
       
-      // Create 3D Spatial Panner Node
-      pannerNode = currentAudioCtx.createStereoPanner();
-      pannerNode.pan.value = 0;
+      // Create 3D Spatial Panner Node (safely checked for browser compatibility)
+      if (currentAudioCtx.createStereoPanner) {
+        pannerNode = currentAudioCtx.createStereoPanner();
+        pannerNode.pan.value = 0;
+      } else {
+        pannerNode = null;
+      }
       
-      // Create Gain Node (allows programmatic volume control + volume boost on iOS Safari)
+      // Create Gain Node (allows programmatic volume control + volume boost)
       gainNode = currentAudioCtx.createGain();
-      // Provide a 1.8x volume multiplier when Bass Boost is active to make it super loud!
       const volMultiplier = bassBoostActive ? 1.8 : 1.2;
       gainNode.gain.value = targetVolume * volMultiplier;
       
-      // Connect nodes: source -> bassFilter -> pannerNode -> gainNode -> analyser -> destination
+      // Connect nodes safely: source -> bassFilter -> [pannerNode] -> gainNode -> analyser -> destination
       source.connect(bassFilter);
-      bassFilter.connect(pannerNode);
-      pannerNode.connect(gainNode);
+      if (pannerNode) {
+        bassFilter.connect(pannerNode);
+        pannerNode.connect(gainNode);
+      } else {
+        bassFilter.connect(gainNode);
+      }
       gainNode.connect(analyser);
       analyser.connect(currentAudioCtx.destination);
     }
