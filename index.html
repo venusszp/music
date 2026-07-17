@@ -1675,7 +1675,7 @@ function fadeAudio(toVolume, duration, onComplete) {
     clearInterval(fadeInterval);
     fadeInterval = null;
   }
-  const startVolume = targetVolume;
+  const startVolume = gainNode ? (gainNode.gain.value / (bassBoostActive ? 1.8 : 1.2)) : audio.volume;
   const steps = 25;
   const stepTime = duration / steps;
   const volDiff = toVolume - startVolume;
@@ -1684,16 +1684,16 @@ function fadeAudio(toVolume, duration, onComplete) {
   fadeInterval = setInterval(() => {
     step++;
     const currentVol = startVolume + (volDiff * (step / steps));
-    targetVolume = Math.max(0, Math.min(1, currentVol));
+    const clampedVol = Math.max(0, Math.min(1, currentVol));
     
-    // Apply to gainNode if initialized
+    // Apply to gainNode if initialized (do NOT modify targetVolume during fading)
     if (gainNode) {
       const volMultiplier = bassBoostActive ? 1.8 : 1.2;
-      gainNode.gain.value = targetVolume * volMultiplier;
+      gainNode.gain.value = clampedVol * volMultiplier;
       audio.volume = 1.0; // Keep element volume at max
     } else {
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-      audio.volume = isIOS ? 1.0 : targetVolume;
+      audio.volume = isIOS ? 1.0 : clampedVol;
     }
     
     updateVolumeIcon();
@@ -1860,36 +1860,41 @@ async function prevTrack() {
   await loadTrack(prev);
 }
 
-audio.addEventListener('timeupdate', () => {
-  if (audio.duration && !isDraggingProgress && !isSeeking) {
-    currentTimeEl.textContent = formatTime(audio.currentTime);
-  }
-});
-
-audio.addEventListener('loadedmetadata', () => {
-  totalTimeEl.textContent = formatTime(audio.duration);
-  trackArtist.textContent = '♪';
-  if (modalOverlay.classList.contains('open')) {
-    renderSongList();
-  }
-});
-
-audio.addEventListener('ended', () => {
-  if (repeatOn && !shuffleOn) { audio.currentTime = 0; audio.play().catch(() => {}); }
-  else runAudioAction(nextTrack);
-});
-
-audio.addEventListener('error', (e) => {
-  trackArtist.textContent = 'Ошибка: не поддерживается или файл не найден';
-});
-
 let isSeeking = false;
-audio.addEventListener('seeking', () => { isSeeking = true; });
-audio.addEventListener('seeked', () => {
-  setTimeout(() => {
-    isSeeking = false;
-  }, 200); // 200ms debounce to allow browser player thread to fully sync its timestamp
-});
+
+function bindAudioListeners() {
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration && !isDraggingProgress && !isSeeking) {
+      currentTimeEl.textContent = formatTime(audio.currentTime);
+    }
+  });
+
+  audio.addEventListener('loadedmetadata', () => {
+    totalTimeEl.textContent = formatTime(audio.duration);
+    trackArtist.textContent = '♪';
+    if (modalOverlay.classList.contains('open')) {
+      renderSongList();
+    }
+  });
+
+  audio.addEventListener('ended', () => {
+    if (repeatOn && !shuffleOn) { audio.currentTime = 0; audio.play().catch(() => {}); }
+    else runAudioAction(nextTrack);
+  });
+
+  audio.addEventListener('error', (e) => {
+    trackArtist.textContent = 'Ошибка: не поддерживается или файл не найден';
+  });
+
+  audio.addEventListener('seeking', () => { isSeeking = true; });
+  audio.addEventListener('seeked', () => {
+    setTimeout(() => {
+      isSeeking = false;
+    }, 200); // 200ms debounce to allow browser player thread to fully sync its timestamp
+  });
+}
+
+bindAudioListeners();
 
 // Custom Sliders physics & dragging
 let isDraggingProgress = false;
@@ -2351,6 +2356,27 @@ async function verifySongsAvailability() {
 
 function applyIosBgModeState() {
   if (isIOS) {
+    const wasPlaying = isPlaying && !audio.paused;
+    const curTime = audio.currentTime;
+    const curSrc = audio.src;
+    
+    try {
+      audio.pause();
+    } catch(e) {}
+    
+    // Recreate audio object to completely break free from previous Web Audio node captures
+    audio = new Audio();
+    audio.src = curSrc;
+    audio.currentTime = curTime;
+    bindAudioListeners();
+    
+    // Reset Web Audio pipeline instances for a fresh start
+    source = null;
+    currentAudioCtx = null;
+    gainNode = null;
+    bassFilter = null;
+    pannerNode = null;
+
     if (iosBackgroundMode) {
       document.documentElement.classList.add('is-ios-bg-active');
       audio.volume = 1.0;
@@ -2358,6 +2384,10 @@ function applyIosBgModeState() {
       document.documentElement.classList.remove('is-ios-bg-active');
       audio.volume = targetVolume;
       setupAudioContext();
+    }
+    
+    if (wasPlaying) {
+      audio.play().catch(() => {});
     }
   }
 }
