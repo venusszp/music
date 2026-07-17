@@ -1487,7 +1487,7 @@ function getPrevIndex() {
 }
 
 function updateVolumeIcon() {
-  const v = audio.volume;
+  const v = targetVolume;
   const waves = volWave;
   if (v === 0) { waves.style.opacity = '0.2'; }
   else if (v < 0.33) { waves.setAttribute('d', 'M15.54 8.46a5 5 0 0 1 0 7.07'); waves.style.opacity = '0.5'; }
@@ -1497,14 +1497,15 @@ function updateVolumeIcon() {
 
 let bassFilter = null;
 let pannerNode = null;
+let gainNode = null;
 let bassBoostActive = false;
 let spatialAudioActive = false;
 
 function setupAudioContext() {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  if (isIOS) return;
   try {
-    if (!currentAudioCtx) currentAudioCtx = new AudioContext();
+    if (!currentAudioCtx) {
+      currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
     if (!source) {
       source = currentAudioCtx.createMediaElementSource(audio);
       analyser = currentAudioCtx.createAnalyser();
@@ -1516,22 +1517,29 @@ function setupAudioContext() {
       bassFilter = currentAudioCtx.createBiquadFilter();
       bassFilter.type = 'lowshelf';
       bassFilter.frequency.value = 150;
-      bassFilter.gain.value = bassBoostActive ? 9 : 0;
+      bassFilter.gain.value = bassBoostActive ? 12 : 0; // +12dB bass boost!
       
       // Create 3D Spatial Panner Node
       pannerNode = currentAudioCtx.createStereoPanner();
       pannerNode.pan.value = 0;
       
-      // Connect nodes: source -> bassFilter -> pannerNode -> analyser -> destination
+      // Create Gain Node (allows programmatic volume control + volume boost on iOS Safari)
+      gainNode = currentAudioCtx.createGain();
+      // Provide a 1.8x volume multiplier when Bass Boost is active to make it super loud!
+      const volMultiplier = bassBoostActive ? 1.8 : 1.2;
+      gainNode.gain.value = targetVolume * volMultiplier;
+      
+      // Connect nodes: source -> bassFilter -> pannerNode -> gainNode -> analyser -> destination
       source.connect(bassFilter);
       bassFilter.connect(pannerNode);
-      pannerNode.connect(analyser);
+      pannerNode.connect(gainNode);
+      gainNode.connect(analyser);
       analyser.connect(currentAudioCtx.destination);
     }
     if (currentAudioCtx.state === 'suspended') currentAudioCtx.resume();
   } catch (e) {
     try {
-      if (!currentAudioCtx) currentAudioCtx = new AudioContext();
+      if (!currentAudioCtx) currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       analyser = currentAudioCtx.createAnalyser();
       analyser.fftSize = 128;
       bufferLength = analyser.frequencyBinCount;
@@ -1549,7 +1557,7 @@ function fadeAudio(toVolume, duration, onComplete) {
     clearInterval(fadeInterval);
     fadeInterval = null;
   }
-  const startVolume = audio.volume;
+  const startVolume = targetVolume;
   const steps = 25;
   const stepTime = duration / steps;
   const volDiff = toVolume - startVolume;
@@ -1558,7 +1566,17 @@ function fadeAudio(toVolume, duration, onComplete) {
   fadeInterval = setInterval(() => {
     step++;
     const currentVol = startVolume + (volDiff * (step / steps));
-    audio.volume = Math.max(0, Math.min(1, currentVol));
+    targetVolume = Math.max(0, Math.min(1, currentVol));
+    
+    // Apply to gainNode if initialized
+    if (gainNode) {
+      const volMultiplier = bassBoostActive ? 1.8 : 1.2;
+      gainNode.gain.value = targetVolume * volMultiplier;
+      audio.volume = 1.0; // Keep element volume at max
+    } else {
+      audio.volume = targetVolume;
+    }
+    
     updateVolumeIcon();
     if (step >= steps) {
       clearInterval(fadeInterval);
@@ -1828,8 +1846,15 @@ function updateVolumeFromCoords(clientX) {
   pct = Math.max(0, Math.min(100, pct));
   volumeTargetPercent = pct;
   targetVolume = pct / 100;
+  
   if (!fadeInterval && !isFadingOut) {
-    audio.volume = targetVolume;
+    if (gainNode) {
+      const volMultiplier = bassBoostActive ? 1.8 : 1.2;
+      gainNode.gain.value = targetVolume * volMultiplier;
+      audio.volume = 1.0; // Keep element volume at max
+    } else {
+      audio.volume = targetVolume;
+    }
   }
   updateVolumeIcon();
   localStorage.setItem('targetVolume', targetVolume);
@@ -1962,7 +1987,11 @@ bassBoostBtn.addEventListener('click', () => {
   bassBoostBtn.classList.toggle('active', bassBoostActive);
   localStorage.setItem('bassBoostActive', bassBoostActive);
   if (bassFilter) {
-    bassFilter.gain.value = bassBoostActive ? 9 : 0;
+    bassFilter.gain.value = bassBoostActive ? 12 : 0;
+  }
+  if (gainNode) {
+    const volMultiplier = bassBoostActive ? 1.8 : 1.2;
+    gainNode.gain.value = targetVolume * volMultiplier;
   }
 });
 
