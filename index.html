@@ -466,6 +466,20 @@ body {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
+@media (max-width: 768px) {
+  #particle-canvas { display: none !important; }
+  body {
+    background: linear-gradient(135deg, #07070d 0%, #0f0b1e 50%, #15091a 100%) !important;
+    background-size: 400% 400% !important;
+    animation: gradientShift 16s ease infinite !important;
+  }
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @media (max-width: 480px) {
   .player { padding: 20px 16px 18px; border-radius: 28px; }
   .controls { gap: 12px; }
@@ -1029,8 +1043,7 @@ function animateParticles() {
 
   const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   if (isMobile) {
-    requestAnimationFrame(animateParticles);
-    return;
+    return; // Completely stop rendering to save 100% CPU on mobile
   }
 
   // Update and draw shockwave ring visual effects
@@ -1285,31 +1298,39 @@ function drawVisualizer() {
     }
   }
 
-  // Connect Bass (0-7) to Mids (8-19)
-  for (let i = 0; i < 8; i++) {
-    const stroke = (themeMode === 'yellow') ? `rgba(245, 158, 11, ${visLinesOpacity * 0.45})` : `rgba(168, 85, 247, ${visLinesOpacity * 0.45})`;
-    drawNearestConnection(i, 8, 20, stroke, 0.8);
+  const isMobileDevice = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // Connect Bass (0-7) to Mids (8-19) - Skip on mobile to save CPU cycles
+  if (!isMobileDevice) {
+    for (let i = 0; i < 8; i++) {
+      const stroke = (themeMode === 'yellow') ? `rgba(245, 158, 11, ${visLinesOpacity * 0.45})` : `rgba(168, 85, 247, ${visLinesOpacity * 0.45})`;
+      drawNearestConnection(i, 8, 20, stroke, 0.8);
+    }
+
+    // Connect Mids (8-19) to Highs (20-35)
+    for (let i = 8; i < 20; i++) {
+      const stroke = (themeMode === 'yellow') ? `rgba(234, 179, 8, ${visLinesOpacity * 0.35})` : `rgba(99, 102, 241, ${visLinesOpacity * 0.35})`;
+      drawNearestConnection(i, 20, 36, stroke, 0.6);
+    }
   }
 
-  // Connect Mids (8-19) to Highs (20-35)
-  for (let i = 8; i < 20; i++) {
-    const stroke = (themeMode === 'yellow') ? `rgba(234, 179, 8, ${visLinesOpacity * 0.35})` : `rgba(99, 102, 241, ${visLinesOpacity * 0.35})`;
-    drawNearestConnection(i, 20, 36, stroke, 0.6);
-  }
-
-  // 3. Draw the glowing balls and their trails
+  // 3. Draw the glowing balls and their trails (skip trails on mobile for 10x faster rendering)
   for (let i = 0; i < totalBalls; i++) {
     const ball = visBalls[i];
     const len = ball.history.length;
-    for (let j = 0; j < len; j++) {
+    const startIdx = isMobileDevice ? len - 1 : 0;
+    
+    for (let j = startIdx; j < len; j++) {
       const pos = ball.history[j];
-      const ratio = (j + 1) / len; // fade size/opacity as it gets older
+      const ratio = (j + 1) / len;
       visCtx.beginPath();
       visCtx.arc(pos.x, pos.y, pos.size * (0.4 + ratio * 0.6), 0, Math.PI * 2);
       
-      // Neon glow setup
-      visCtx.shadowBlur = 12 * ratio;
-      visCtx.shadowColor = `hsla(${pos.hue}, 95%, 65%, 0.8)`;
+      // Neon glow setup (Disabled on mobile to prevent GPU performance drops)
+      if (!isMobileDevice) {
+        visCtx.shadowBlur = 12 * ratio;
+        visCtx.shadowColor = `hsla(${pos.hue}, 95%, 65%, 0.8)`;
+      }
       visCtx.fillStyle = `hsla(${pos.hue}, 95%, 65%, ${pos.opacity * ratio * (j === len - 1 ? 1 : 0.4)})`;
       visCtx.fill();
     }
@@ -1502,6 +1523,8 @@ let bassBoostActive = false;
 let spatialAudioActive = false;
 
 function setupAudioContext() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) return;
   try {
     if (!currentAudioCtx) {
       currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -1574,7 +1597,8 @@ function fadeAudio(toVolume, duration, onComplete) {
       gainNode.gain.value = targetVolume * volMultiplier;
       audio.volume = 1.0; // Keep element volume at max
     } else {
-      audio.volume = targetVolume;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      audio.volume = isIOS ? 1.0 : targetVolume;
     }
     
     updateVolumeIcon();
@@ -1853,7 +1877,8 @@ function updateVolumeFromCoords(clientX) {
       gainNode.gain.value = targetVolume * volMultiplier;
       audio.volume = 1.0; // Keep element volume at max
     } else {
-      audio.volume = targetVolume;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      audio.volume = isIOS ? 1.0 : targetVolume;
     }
   }
   updateVolumeIcon();
