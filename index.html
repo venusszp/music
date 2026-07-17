@@ -1707,8 +1707,10 @@ function fadeAudio(toVolume, duration, onComplete) {
 
 // iOS-like rapid-click action lock to prevent crashes & audio overlapping
 let isAudioBusy = false;
+let isSwitchingBgMode = false;
+
 async function runAudioAction(actionFn) {
-  if (isAudioBusy) return;
+  if (isAudioBusy || isSwitchingBgMode) return;
   isAudioBusy = true;
   try {
     await actionFn();
@@ -2354,29 +2356,39 @@ async function verifySongsAvailability() {
   renderSongList();
 }
 
-function applyIosBgModeState() {
+async function applyIosBgModeState() {
   if (isIOS) {
+    // 1. Lock clicks to prevent user interaction and glitches during nodes swapping
+    isSwitchingBgMode = true;
+    const oldArtistText = trackArtist.textContent;
+    trackArtist.textContent = 'Применение режима...';
+    
     const wasPlaying = isPlaying && !audio.paused;
     const curTime = audio.currentTime;
     const curSrc = audio.src;
     
+    // 2. Stop audio playback first
     try {
       audio.pause();
     } catch(e) {}
     
-    // Recreate audio object to completely break free from previous Web Audio node captures
+    // Short delay to let OS audio system settle and release focus
+    await new Promise(resolve => setTimeout(resolve, 160));
+    
+    // 3. Recreate clean audio element to break Web Audio capturing
     audio = new Audio();
     audio.src = curSrc;
     audio.currentTime = curTime;
     bindAudioListeners();
     
-    // Reset Web Audio pipeline instances for a fresh start
+    // 4. Wipe Web Audio instances
     source = null;
     currentAudioCtx = null;
     gainNode = null;
     bassFilter = null;
     pannerNode = null;
 
+    // 5. Update layouts and volume preferences
     if (iosBackgroundMode) {
       document.documentElement.classList.add('is-ios-bg-active');
       audio.volume = 1.0;
@@ -2386,9 +2398,19 @@ function applyIosBgModeState() {
       setupAudioContext();
     }
     
+    // Let HTML audio element initialize and register context pipelines
+    await new Promise(resolve => setTimeout(resolve, 160));
+    
+    // 6. Resume playback if it was active
     if (wasPlaying) {
-      audio.play().catch(() => {});
+      try {
+        await audio.play();
+      } catch(e) {}
     }
+    
+    // Restore layout artist label and remove locks
+    trackArtist.textContent = wasPlaying ? '♪' : 'Пауза';
+    isSwitchingBgMode = false;
   }
 }
 
