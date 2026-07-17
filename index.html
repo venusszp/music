@@ -479,8 +479,46 @@ body {
 
 /* Custom iOS-like toggle switch inside playlist */
 .song-item.disabled {
-  opacity: 0.38;
+  opacity: 0.65;
+  border-color: rgba(239, 68, 68, 0.18);
+  background: rgba(239, 68, 68, 0.03);
 }
+.song-item.disabled .name {
+  color: #f87171;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.2);
+}
+.song-item.disabled .idx {
+  color: rgba(239, 68, 68, 0.45);
+}
+}
+
+/* Animated Equalizer inside Playlist */
+.eq-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2.5px;
+  width: 24px;
+  height: 14px;
+  margin: 0 auto;
+}
+.eq-bar {
+  width: 3px;
+  height: 2px;
+  background-color: var(--theme-primary);
+  border-radius: 2px;
+  animation: bounceEq 0.8s ease-in-out infinite alternate;
+  box-shadow: 0 0 4px var(--theme-glow);
+}
+.eq-bar:nth-child(1) { animation-duration: 0.7s; animation-delay: 0.1s; }
+.eq-bar:nth-child(2) { animation-duration: 0.9s; animation-delay: 0.3s; }
+.eq-bar:nth-child(3) { animation-duration: 0.6s; animation-delay: 0s; }
+
+@keyframes bounceEq {
+  0% { height: 2px; }
+  100% { height: 14px; }
+}
+
 .song-toggle {
   position: relative;
   display: inline-block;
@@ -718,6 +756,7 @@ let burstParticles = [];
 let shocks = [];
 let mouse = { x: -9999, y: -9999, vx: 0, vy: 0 };
 let themeMode = 'neon';
+let isPlaying = false;
 let backgroundOrbs = [
   { xRatio: 0.25, yRatio: 0.35, vx: 0.8, vy: 0.6, r: 450, curRGB: [99, 102, 241], targetRGB: [99, 102, 241], opacity: 0.12 },
   { xRatio: 0.75, yRatio: 0.65, vx: -0.7, vy: 0.8, r: 500, curRGB: [168, 85, 247], targetRGB: [168, 85, 247], opacity: 0.12 },
@@ -988,6 +1027,12 @@ function animateParticles() {
   });
   pCtx.restore();
 
+  const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  if (isMobile) {
+    requestAnimationFrame(animateParticles);
+    return;
+  }
+
   // Update and draw shockwave ring visual effects
   shocks = shocks.filter(s => {
     s.radius += s.speed;
@@ -1046,8 +1091,24 @@ function initVisBalls(count) {
 }
 
 function drawVisualizer() {
-  if (!analyser) { requestAnimationFrame(drawVisualizer); return; }
-  try { analyser.getByteFrequencyData(dataArray); } catch(e) { requestAnimationFrame(drawVisualizer); return; }
+  if (!analyser) {
+    if (!dataArray) {
+      bufferLength = 64;
+      dataArray = new Uint8Array(bufferLength);
+    }
+    const time = Date.now() * 0.001;
+    for (let i = 0; i < bufferLength; i++) {
+      if (isPlaying && !audio.paused) {
+        const base = Math.abs(Math.sin(time * 2.2 + i * 0.18) * Math.cos(time * 0.8 + i * 0.08)) * 140;
+        const beatVal = (i < 8) ? (Math.sin(time * 6.5) > 0.6 ? 50 : 0) : 0;
+        dataArray[i] = Math.max(10, Math.min(255, base + beatVal + Math.random() * 15));
+      } else {
+        dataArray[i] = dataArray[i] * 0.88;
+      }
+    }
+  } else {
+    try { analyser.getByteFrequencyData(dataArray); } catch(e) { requestAnimationFrame(drawVisualizer); return; }
+  }
   visCtx.clearRect(0, 0, visCanvas.width, visCanvas.height);
   const w = visCanvas.width, h = visCanvas.height;
   const cx = w / 2, cy = h / 2, maxR = Math.min(w, h) / 2.5;
@@ -1294,7 +1355,6 @@ if (window.location.protocol === 'file:') {
 const AudioContext = window.AudioContext || window.webkitAudioContext;
 let audio = new Audio();
 let currentAudioCtx = null;
-let isPlaying = false;
 let currentIndex = -1;
 let shuffleOn = false;
 let repeatOn = false;
@@ -1441,6 +1501,8 @@ let bassBoostActive = false;
 let spatialAudioActive = false;
 
 function setupAudioContext() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (isIOS) return;
   try {
     if (!currentAudioCtx) currentAudioCtx = new AudioContext();
     if (!source) {
@@ -1985,6 +2047,8 @@ function renderSongList() {
     const disabled = isSongDisabled(file);
     li.className = 'song-item' + (i === currentIndex ? ' active' : '') + (disabled ? ' disabled' : '');
     
+    const trackNum = visibleIndex++;
+    
     let indicatorHtml = '';
     if (i === currentIndex) {
       if (isPlaying) {
@@ -1998,7 +2062,7 @@ function renderSongList() {
         indicatorHtml = `<span class="idx" style="color:var(--theme-primary);font-weight:700;">⏸</span>`;
       }
     } else {
-      indicatorHtml = `<span class="idx">${visibleIndex++}</span>`;
+      indicatorHtml = `<span class="idx">${trackNum}</span>`;
     }
 
     li.innerHTML = `
@@ -2082,6 +2146,39 @@ async function loadMusicFiles() {
   
   renderSongList();
   restorePlayerState();
+  verifySongsAvailability();
+}
+
+async function verifySongsAvailability() {
+  // Fail-safe: if all songs are disabled (usually due to a bug or offline first-load), enable everything back
+  if (disabledSongs.length >= songFiles.length && songFiles.length > 0) {
+    disabledSongs = [];
+    localStorage.setItem('disabledSongs', JSON.stringify(disabledSongs));
+    renderSongList();
+  }
+
+  const checks = songFiles.map(async (file) => {
+    try {
+      // Use lightweight GET request fetching only the first byte (fully compatible with any server)
+      const response = await fetch(encodePath(file), { headers: { 'Range': 'bytes=0-0' } });
+      if (response.status === 404) {
+        if (!isSongDisabled(file)) {
+          toggleSongState(file);
+        }
+      } else if (response.ok || response.status === 200 || response.status === 206 || response.status === 304) {
+        // Self-healing: if the song exists, ensure it is enabled in local storage
+        const idx = disabledSongs.indexOf(file);
+        if (idx !== -1) {
+          disabledSongs.splice(idx, 1);
+          localStorage.setItem('disabledSongs', JSON.stringify(disabledSongs));
+        }
+      }
+    } catch (err) {
+      // Network issues shouldn't disable tracks
+    }
+  });
+  await Promise.all(checks);
+  renderSongList();
 }
 
 function restorePlayerState() {
@@ -2154,6 +2251,8 @@ function restorePlayerState() {
 }
 
 loadMusicFiles();
+
+// Background playback is natively handled by bypassing AudioContext routing on iOS devices.
 </script>
 </body>
 </html>
