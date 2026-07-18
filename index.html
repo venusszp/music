@@ -249,6 +249,39 @@ body {
 
 .artwork canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 
+.mobile-artwork-fallback {
+  display: none;
+  position: absolute;
+  inset: 0;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.music-note-icon {
+  width: 76px;
+  height: 76px;
+  stroke: var(--theme-primary);
+  filter: drop-shadow(0 0 12px var(--theme-glow));
+  animation: pulseIcon 2.5s ease-in-out infinite;
+  transition: stroke 0.6s ease, filter 0.6s ease;
+}
+
+@keyframes pulseIcon {
+  0% { transform: scale(1); opacity: 0.75; filter: drop-shadow(0 0 10px var(--theme-glow)); }
+  50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 24px var(--theme-glow)); }
+  100% { transform: scale(1); opacity: 0.75; filter: drop-shadow(0 0 10px var(--theme-glow)); }
+}
+
+@media (max-width: 768px) {
+  #visualizer {
+    display: none !important;
+  }
+  .mobile-artwork-fallback {
+    display: flex !important;
+  }
+}
+
 /* ---- Track Info ---- */
 .track-info { text-align: center; margin-bottom: 18px; position: relative; }
 
@@ -509,7 +542,7 @@ body {
 }
 .modal-close:hover { color: #fff; background: rgba(255,255,255,0.06); }
 
-.song-list { list-style: none; overflow-y: auto; flex: 1; padding: 0 4px; }
+.song-list { list-style: none; overflow-y: auto; flex: 1; padding: 0 4px; -webkit-overflow-scrolling: touch; }
 .song-list::-webkit-scrollbar { width: 3px; }
 .song-list::-webkit-scrollbar-track { background: transparent; }
 .song-list::-webkit-scrollbar-thumb { background: var(--theme-glow-light); border-radius: 4px; }
@@ -810,6 +843,13 @@ input:checked + .slider:before {
   </button>
   <div class="artwork" id="artwork">
     <canvas id="visualizer"></canvas>
+    <div class="mobile-artwork-fallback">
+      <svg class="music-note-icon" viewBox="0 0 24 24">
+        <path d="M9 18V5l12-2v13" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="6" cy="18" r="3" stroke="currentColor" fill="none" stroke-width="2"></circle>
+        <circle cx="18" cy="16" r="3" stroke="currentColor" fill="none" stroke-width="2"></circle>
+      </svg>
+    </div>
   </div>
 
   <div class="track-info">
@@ -903,6 +943,7 @@ input:checked + .slider:before {
 
 <script>
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isMobileDevice = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 if (isIOS) document.documentElement.classList.add('is-ios');
 let iosBackgroundMode = localStorage.getItem('iosBackgroundMode') !== 'false';
 
@@ -1266,6 +1307,7 @@ function initVisBalls(count) {
 }
 
 function drawVisualizer() {
+  if (isMobileDevice) return;
   if (!analyser) {
     if (!dataArray) {
       bufferLength = 64;
@@ -1472,7 +1514,6 @@ function drawVisualizer() {
     }
   }
 
-  const isMobileDevice = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   // Connect Bass (0-7) to Mids (8-19) - Skip on mobile to save CPU cycles
   if (!isMobileDevice) {
@@ -2473,32 +2514,19 @@ async function loadMusicFiles() {
 }
 
 async function verifySongsAvailability() {
-  // Fail-safe: if all songs are disabled (usually due to a bug or offline first-load), enable everything back
-  if (disabledSongs.length >= songFiles.length && songFiles.length > 0) {
-    disabledSongs = [];
-    localStorage.setItem('disabledSongs', JSON.stringify(disabledSongs));
-    renderSongList();
-  }
-
+  // Self-healing check: if any track is marked disabled in local storage but actually exists, re-enable it
   const checks = songFiles.map(async (file) => {
+    if (!isSongDisabled(file)) return;
     try {
-      // Use lightweight GET request fetching only the first byte (fully compatible with any server)
-      const response = await fetch(encodePath(file), { headers: { 'Range': 'bytes=0-0' } });
-      if (response.status === 404) {
-        if (!isSongDisabled(file)) {
-          toggleSongState(file);
-        }
-      } else if (response.ok || response.status === 200 || response.status === 206 || response.status === 304) {
-        // Self-healing: if the song exists, ensure it is enabled in local storage
+      const response = await fetch(encodePath(file), { method: 'HEAD' });
+      if (response.ok || response.status === 200 || response.status === 206 || response.status === 304) {
         const idx = disabledSongs.indexOf(file);
         if (idx !== -1) {
           disabledSongs.splice(idx, 1);
           localStorage.setItem('disabledSongs', JSON.stringify(disabledSongs));
         }
       }
-    } catch (err) {
-      // Network issues shouldn't disable tracks
-    }
+    } catch (err) {}
   });
   await Promise.all(checks);
   renderSongList();
@@ -2563,6 +2591,20 @@ async function applyIosBgModeState() {
 }
 
 function restorePlayerState() {
+  // Clean up disabledSongs (remove invalid or stale paths from migration)
+  let cleanDisabled = [];
+  disabledSongs.forEach(f => {
+    if (songFiles.includes(f)) {
+      cleanDisabled.push(f);
+    }
+  });
+  // Fail-safe: if all or almost all songs became disabled, reset the list completely
+  if (cleanDisabled.length >= songFiles.length && songFiles.length > 0) {
+    cleanDisabled = [];
+  }
+  disabledSongs = cleanDisabled;
+  localStorage.setItem('disabledSongs', JSON.stringify(disabledSongs));
+
   // Initialize iOS Background Mode checkbox listener
   const iosBgCheckbox = document.getElementById('iosBgCheckbox');
   if (iosBgCheckbox) {
