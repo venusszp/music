@@ -40,11 +40,45 @@
   --theme-player-bg: linear-gradient(145deg, rgba(50,38,15,0.75), rgba(30,20,5,0.85));
 }
 
+:root.theme-blue {
+  --theme-primary: #0ea5e9; /* Sky Blue */
+  --theme-secondary: #0284c7; /* Darker Sky */
+  --theme-accent: #38bdf8; /* Lighter Sky */
+  --theme-glow: rgba(14, 165, 233, 0.35);
+  --theme-glow-light: rgba(14, 165, 233, 0.15);
+  --theme-text-glow: rgba(125, 211, 252, 0.5);
+  --theme-artist-color: rgba(14, 165, 233, 0.55);
+  --theme-btn-border: rgba(14, 165, 233, 0.4);
+  --theme-btn-border-hover: rgba(14, 165, 233, 0.6);
+  --theme-btn-glow: rgba(14, 165, 233, 0.25);
+  --theme-btn-glow-active: rgba(14, 165, 233, 0.45);
+  --theme-bg-grad: linear-gradient(135deg, rgba(14, 165, 233, 0.3), transparent 40%, transparent 60%, rgba(59, 130, 246, 0.2));
+  --theme-player-bg: linear-gradient(145deg, rgba(10,35,55,0.75), rgba(5,20,35,0.85));
+}
+
+:root.theme-teal {
+  --theme-primary: #14b8a6; /* Teal */
+  --theme-secondary: #0d9488; /* Darker Teal */
+  --theme-accent: #2dd4bf; /* Mint/Cyan */
+  --theme-glow: rgba(20, 184, 166, 0.35);
+  --theme-glow-light: rgba(20, 184, 166, 0.15);
+  --theme-text-glow: rgba(153, 246, 228, 0.5);
+  --theme-artist-color: rgba(20, 184, 166, 0.55);
+  --theme-btn-border: rgba(20, 184, 166, 0.4);
+  --theme-btn-border-hover: rgba(20, 184, 166, 0.6);
+  --theme-btn-glow: rgba(20, 184, 166, 0.25);
+  --theme-btn-glow-active: rgba(20, 184, 166, 0.45);
+  --theme-bg-grad: linear-gradient(135deg, rgba(20, 184, 166, 0.3), transparent 40%, transparent 60%, rgba(45, 212, 191, 0.2));
+  --theme-player-bg: linear-gradient(145deg, rgba(8,45,35,0.75), rgba(4,25,20,0.85));
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: 'Inter', -apple-system, sans-serif;
-  background: #08080f;
+  background: linear-gradient(135deg, #07070d 0%, #0f0b1e 50%, #15091a 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
   min-height: 100vh;
   display: flex;
   justify-content: center;
@@ -52,6 +86,19 @@ body {
   overflow: hidden;
   color: #fff;
   user-select: none;
+  transition: background 1s ease;
+}
+
+.theme-yellow body {
+  background: linear-gradient(135deg, #0a0805 0%, #15100a 50%, #1c0e04 100%);
+}
+
+.theme-blue body {
+  background: linear-gradient(135deg, #040810 0%, #08111a 50%, #01060c 100%);
+}
+
+.theme-teal body {
+  background: linear-gradient(135deg, #030a09 0%, #061411 50%, #010806 100%);
 }
 
 #particle-canvas {
@@ -67,7 +114,7 @@ body {
   z-index: 1;
   width: 430px;
   max-width: 92vw;
-  background: linear-gradient(145deg, rgba(25,22,40,0.75), rgba(15,12,30,0.85));
+  background: var(--theme-player-bg);
   backdrop-filter: blur(32px);
   -webkit-backdrop-filter: blur(32px);
   border: 1px solid rgba(255,255,255,0.06);
@@ -77,7 +124,7 @@ body {
     0 30px 80px rgba(0,0,0,0.7),
     0 0 0 1px rgba(255,255,255,0.03) inset,
     0 1px 0 rgba(255,255,255,0.05) inset;
-  transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease;
+  transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease, background 0.6s ease;
   overflow: hidden;
 }
 
@@ -93,6 +140,16 @@ body {
 }
 
 :root.theme-yellow .player::after {
+  opacity: 1;
+}
+
+:root.theme-blue .player::after {
+  background: linear-gradient(145deg, rgba(10,35,55,0.75), rgba(5,20,35,0.85));
+  opacity: 1;
+}
+
+:root.theme-teal .player::after {
+  background: linear-gradient(145deg, rgba(8,45,35,0.75), rgba(4,25,20,0.85));
   opacity: 1;
 }
 
@@ -177,6 +234,16 @@ body {
 }
 
 :root.theme-yellow .artwork::after {
+  opacity: 1;
+}
+
+:root.theme-blue .artwork::after {
+  background: linear-gradient(135deg, #051424, #08213a, #030e1a);
+  opacity: 1;
+}
+
+:root.theme-teal .artwork::after {
+  background: linear-gradient(135deg, #031c17, #062b24, #02120f);
   opacity: 1;
 }
 
@@ -468,11 +535,6 @@ body {
 
 @media (max-width: 768px) {
   #particle-canvas { display: none !important; }
-  body {
-    background: linear-gradient(135deg, #07070d 0%, #0f0b1e 50%, #15091a 100%) !important;
-    background-size: 400% 400% !important;
-    animation: gradientShift 16s ease infinite !important;
-  }
 }
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
@@ -942,8 +1004,18 @@ class ParticleP {
     this.x += this.vx; this.y += this.vy;
 
     // Smoothly shift particle hue towards target theme hue
-    const targetBaseHue = (themeMode === 'yellow') ? 35 : 220;
-    const targetRange = (themeMode === 'yellow') ? 25 : 40;
+    let targetBaseHue = 220;
+    let targetRange = 40;
+    if (themeMode === 'yellow') {
+      targetBaseHue = 35;
+      targetRange = 25;
+    } else if (themeMode === 'blue') {
+      targetBaseHue = 195;
+      targetRange = 25;
+    } else if (themeMode === 'teal') {
+      targetBaseHue = 165;
+      targetRange = 25;
+    }
     const targetHue = targetBaseHue + (Math.abs(this.x + this.y) % targetRange);
     this.hue += (targetHue - this.hue) * 0.05;
 
@@ -1028,7 +1100,10 @@ function drawShuffleConnections() {
       const dist = dx * dx + dy * dy;
       if (dist < maxDist) {
         const alpha = (1 - dist / maxDist) * 0.2 * pulse;
-        const hue = (themeMode === 'yellow') ? (30 + Math.sin(time * 2) * 15) : 280;
+        let hue = 280;
+        if (themeMode === 'yellow') hue = 30 + Math.sin(time * 2) * 15;
+        else if (themeMode === 'blue') hue = 195 + Math.sin(time * 2) * 15;
+        else if (themeMode === 'teal') hue = 165 + Math.sin(time * 2) * 15;
         pCtx.beginPath();
         pCtx.moveTo(particles[i].x, particles[i].y);
         pCtx.lineTo(particles[j].x, particles[j].y);
@@ -1051,7 +1126,10 @@ function drawRepeatConnections() {
       const dist = dx * dx + dy * dy;
       if (dist < maxDist && dist > 5000) {
         const alpha = (1 - dist / maxDist) * 0.12;
-        const hue = (themeMode === 'yellow') ? (20 + Math.sin(time + i * 0.1) * 20) : (180 + Math.sin(time + i * 0.1) * 30);
+        let hue = 180 + Math.sin(time + i * 0.1) * 30;
+        if (themeMode === 'yellow') hue = 20 + Math.sin(time + i * 0.1) * 20;
+        else if (themeMode === 'blue') hue = 195 + Math.sin(time + i * 0.1) * 20;
+        else if (themeMode === 'teal') hue = 150 + Math.sin(time + i * 0.1) * 20;
         pCtx.beginPath();
         pCtx.moveTo(particles[i].x, particles[i].y);
         pCtx.lineTo(particles[j].x, particles[j].y);
@@ -1233,7 +1311,10 @@ function drawVisualizer() {
     trackInfo.style.transition = 'transform 0.08s ease-out';
   }
 
-  const targetThemeHue = (themeMode === 'yellow') ? 35 : 220;
+  let targetThemeHue = 220;
+  if (themeMode === 'yellow') targetThemeHue = 35;
+  else if (themeMode === 'blue') targetThemeHue = 195;
+  else if (themeMode === 'teal') targetThemeHue = 165;
   currentThemeHue += (targetThemeHue - currentThemeHue) * 0.05;
   
   for (let k = 0; k < 3; k++) {
@@ -1261,29 +1342,38 @@ function drawVisualizer() {
     let ballHue = 0;
 
     if (i < 8) {
-      // 1. Bass balls (Lows) - Deep Pink/Red in neon, Deep Orange in yellow
+      // 1. Bass balls (Lows)
       angle = (i / 8) * Math.PI * 2 + (Date.now() * 0.0003);
       baseR = maxR * 0.82;
       freqVal = (dataArray[i] / 255) * 48;
       size = 8;
       opacity = 0.95;
-      ballHue = (themeMode === 'yellow') ? 14 : 335; // Orange vs Red/Pink
+      if (themeMode === 'yellow') ballHue = 14;
+      else if (themeMode === 'blue') ballHue = 195;
+      else if (themeMode === 'teal') ballHue = 165;
+      else ballHue = 335;
     } else if (i < 20) {
-      // 2. Mid balls (Mids) - Indigo/Blue in neon, Gold in yellow
+      // 2. Mid balls (Mids)
       angle = ((i - 8) / 12) * Math.PI * 2 - (Date.now() * 0.0005);
       baseR = maxR * 0.58;
       freqVal = (dataArray[i] / 255) * 34;
       size = 5.5;
       opacity = 0.85;
-      ballHue = (themeMode === 'yellow') ? 42 : 255; // Yellow/Gold vs Purple/Blue
+      if (themeMode === 'yellow') ballHue = 42;
+      else if (themeMode === 'blue') ballHue = 215;
+      else if (themeMode === 'teal') ballHue = 180;
+      else ballHue = 255;
     } else {
-      // 3. High balls (Highs/Treble) - Cyan in neon, Pale Yellow in yellow
+      // 3. High balls (Highs/Treble)
       angle = ((i - 20) / 16) * Math.PI * 2 + (Date.now() * 0.0008);
       baseR = maxR * 0.35;
       freqVal = (dataArray[i] / 255) * 24;
       size = 3.5;
       opacity = 0.8;
-      ballHue = (themeMode === 'yellow') ? 68 : 185; // Pale Yellow vs Cyan/Teal
+      if (themeMode === 'yellow') ballHue = 68;
+      else if (themeMode === 'blue') ballHue = 180;
+      else if (themeMode === 'teal') ballHue = 140;
+      else ballHue = 185;
     }
 
     const currentRadius = baseR + freqVal;
@@ -1432,7 +1522,16 @@ function drawVisualizer() {
     const v = dataArray[idx] / 255 || 0.1;
     const ox = Math.cos(a) * (8 + v * 12), oy = Math.sin(a) * (8 + v * 12);
     visCtx.beginPath(); visCtx.arc(cx + ox, cy + oy, 1.5 + v * 2.5, 0, Math.PI * 2);
-    const particleHue = (themeMode === 'yellow') ? (35 + i * 5 + v * 15) : (260 + i * 12 + v * 30);
+    let particleHue = 260;
+    if (themeMode === 'yellow') {
+      particleHue = 35 + i * 5 + v * 15;
+    } else if (themeMode === 'blue') {
+      particleHue = 195 + i * 5 + v * 15;
+    } else if (themeMode === 'teal') {
+      particleHue = 165 + i * 5 + v * 15;
+    } else {
+      particleHue = 260 + i * 12 + v * 30;
+    }
     visCtx.fillStyle = `hsla(${particleHue}, 85%, 65%, ${0.5 + v * 0.5})`; visCtx.fill();
   }
   requestAnimationFrame(drawVisualizer);
@@ -1751,26 +1850,20 @@ async function loadTrack(index, autoplay = true) {
   if (index < 0 || index >= songFiles.length) return;
   currentIndex = index;
   localStorage.setItem('lastTrackIndex', index);
-  const file = songFiles[index];
-  trackArtist.textContent = 'Загрузка...';
-  
-  try {
-    const response = await fetch(encodePath(file));
-    if (!response.ok) throw new Error('Http status ' + response.status);
-    const blob = await response.blob();
-    
-    if (currentObjectURL) {
-      URL.revokeObjectURL(currentObjectURL);
+  if (shuffleOn && shuffleOrder.length > 0) {
+    const sIdx = shuffleOrder.indexOf(index);
+    if (sIdx !== -1) {
+      shuffleIndex = sIdx;
+      localStorage.setItem('shuffleIndex', shuffleIndex);
     }
-    currentObjectURL = URL.createObjectURL(blob);
-    audio.src = currentObjectURL;
-  } catch (err) {
-    trackArtist.textContent = '⚠️ Ошибка загрузки: ' + err.message;
-    return;
   }
+  const file = songFiles[index];
+  
+  audio.src = encodePath(file);
 
   const name = formatName(file.split('/').pop().split('\\').pop());
   trackName.textContent = name;
+  trackArtist.textContent = '♪';
   updateTrackNameScroll();
   updateMediaSessionMetadata(name);
   audio.load();
@@ -1786,6 +1879,7 @@ async function loadTrack(index, autoplay = true) {
       audio.volume = (isIOS && iosBackgroundMode) ? 1.0 : 0;
       await audio.play();
       fadeAudio(targetVolume, 400);
+      preloadNextTrack();
     } catch (err) {
       trackArtist.textContent = '⚠️ ' + err.message;
       isPlaying = false;
@@ -1838,19 +1932,39 @@ async function togglePlay() {
   }
 }
 
+function getFirstEnabledIndex() {
+  for (let i = 0; i < songFiles.length; i++) {
+    if (!isSongDisabled(songFiles[i])) return i;
+  }
+  return 0;
+}
+
+function getLastEnabledIndex() {
+  for (let i = songFiles.length - 1; i >= 0; i--) {
+    if (!isSongDisabled(songFiles[i])) return i;
+  }
+  return 0;
+}
+
+function preloadNextTrack() {
+  const nextIdx = getNextIndex();
+  if (nextIdx !== -1) {
+    const nextFile = songFiles[nextIdx];
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.href = encodePath(nextFile);
+    // Remove previous prefetches to keep DOM clean
+    const existing = document.querySelectorAll('link[rel="prefetch"]');
+    existing.forEach(el => el.remove());
+    document.head.appendChild(link);
+  }
+}
+
 async function nextTrack() {
   if (songFiles.length === 0) return;
-  const next = getNextIndex();
+  let next = getNextIndex();
   if (next === -1) {
-    isFadingOut = true;
-    fadeAudio(0, 400, () => {
-      if (isFadingOut) {
-        audio.pause(); audio.currentTime = 0; isPlaying = false;
-        playIcon.style.display = 'block'; pauseIcon.style.display = 'none';
-        isFadingOut = false;
-      }
-    });
-    return;
+    next = getFirstEnabledIndex();
   }
   await loadTrack(next);
 }
@@ -1858,7 +1972,10 @@ async function nextTrack() {
 async function prevTrack() {
   if (songFiles.length === 0) return;
   if (audio.currentTime > 2) { audio.currentTime = 0; return; }
-  const prev = getPrevIndex();
+  let prev = getPrevIndex();
+  if (prev === -1 || prev === currentIndex) {
+    prev = getLastEnabledIndex();
+  }
   await loadTrack(prev);
 }
 
@@ -2064,7 +2181,16 @@ shuffleBtn.addEventListener('click', () => {
   shuffleBtn.classList.toggle('active', shuffleOn);
   shuffleActive = shuffleOn;
   localStorage.setItem('shuffleOn', shuffleOn);
-  if (shuffleOn && songFiles.length > 0) generateShuffleOrder();
+  if (shuffleOn && songFiles.length > 0) {
+    generateShuffleOrder();
+    if (currentIndex !== -1) {
+      const sIdx = shuffleOrder.indexOf(currentIndex);
+      if (sIdx !== -1) {
+        shuffleIndex = sIdx;
+        localStorage.setItem('shuffleIndex', shuffleIndex);
+      }
+    }
+  }
 });
 
 repeatBtn.addEventListener('click', () => {
@@ -2079,30 +2205,52 @@ const themeToggle = document.getElementById('themeToggle');
 const sunIcon = document.getElementById('sunIcon');
 const moonIcon = document.getElementById('moonIcon');
 
-themeToggle.addEventListener('click', () => {
-  document.documentElement.classList.toggle('theme-yellow');
-  if (document.documentElement.classList.contains('theme-yellow')) {
-    themeMode = 'yellow';
+function applyTheme(mode) {
+  document.documentElement.classList.remove('theme-yellow', 'theme-blue', 'theme-teal');
+  themeMode = mode;
+  localStorage.setItem('themeMode', themeMode);
+  
+  if (mode === 'yellow') {
+    document.documentElement.classList.add('theme-yellow');
     sunIcon.style.display = 'block';
     moonIcon.style.display = 'none';
-    
-    // Shift glowing background orbs to gold/orange targets
     backgroundOrbs[0].targetRGB = [245, 158, 11];
     backgroundOrbs[1].targetRGB = [234, 179, 8];
     backgroundOrbs[2].targetRGB = [249, 115, 22];
     targetGlowRGB = [245, 158, 11];
-  } else {
-    themeMode = 'neon';
+  } else if (mode === 'blue') {
+    document.documentElement.classList.add('theme-blue');
     sunIcon.style.display = 'none';
     moonIcon.style.display = 'block';
-    
-    // Shift back to neon blue/purple/pink targets
+    backgroundOrbs[0].targetRGB = [14, 165, 233];  // Sky blue
+    backgroundOrbs[1].targetRGB = [59, 130, 246];  // Blue
+    backgroundOrbs[2].targetRGB = [6, 182, 212];   // Cyan
+    targetGlowRGB = [14, 165, 233];
+  } else if (mode === 'teal') {
+    document.documentElement.classList.add('theme-teal');
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
+    backgroundOrbs[0].targetRGB = [20, 184, 166];  // Teal
+    backgroundOrbs[1].targetRGB = [16, 185, 129];  // Emerald
+    backgroundOrbs[2].targetRGB = [6, 182, 212];   // Cyan
+    targetGlowRGB = [20, 184, 166];
+  } else {
+    // Default 'neon'
+    sunIcon.style.display = 'none';
+    moonIcon.style.display = 'block';
     backgroundOrbs[0].targetRGB = [99, 102, 241];
     backgroundOrbs[1].targetRGB = [168, 85, 247];
     backgroundOrbs[2].targetRGB = [236, 72, 153];
     targetGlowRGB = [99, 102, 241];
   }
-  localStorage.setItem('themeMode', themeMode);
+}
+
+themeToggle.addEventListener('click', () => {
+  const themes = ['neon', 'yellow', 'blue', 'teal'];
+  let currentIdx = themes.indexOf(themeMode);
+  if (currentIdx === -1) currentIdx = 0;
+  const nextIdx = (currentIdx + 1) % themes.length;
+  applyTheme(themes[nextIdx]);
 });
 
 // Effects controls logic
@@ -2442,26 +2590,8 @@ function restorePlayerState() {
   spatialAudioActive = localStorage.getItem('spatialAudioActive') === 'true';
   spatialBtn.classList.toggle('active', spatialAudioActive);
   
-  const savedTheme = localStorage.getItem('themeMode');
-  if (savedTheme === 'yellow') {
-    document.documentElement.classList.add('theme-yellow');
-    themeMode = 'yellow';
-    sunIcon.style.display = 'block';
-    moonIcon.style.display = 'none';
-    backgroundOrbs[0].targetRGB = [245, 158, 11];
-    backgroundOrbs[1].targetRGB = [234, 179, 8];
-    backgroundOrbs[2].targetRGB = [249, 115, 22];
-    targetGlowRGB = [245, 158, 11];
-  } else {
-    document.documentElement.classList.remove('theme-yellow');
-    themeMode = 'neon';
-    sunIcon.style.display = 'none';
-    moonIcon.style.display = 'block';
-    backgroundOrbs[0].targetRGB = [99, 102, 241];
-    backgroundOrbs[1].targetRGB = [168, 85, 247];
-    backgroundOrbs[2].targetRGB = [236, 72, 153];
-    targetGlowRGB = [99, 102, 241];
-  }
+  const savedTheme = localStorage.getItem('themeMode') || 'neon';
+  applyTheme(savedTheme);
   
   targetVolume = parseFloat(localStorage.getItem('targetVolume') || '0.7');
   audio.volume = targetVolume;
