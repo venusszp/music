@@ -568,6 +568,19 @@ body {
 
 @media (max-width: 768px) {
   #particle-canvas { display: none !important; }
+  body {
+    background-size: 100% 100% !important;
+    animation: none !important;
+  }
+  .theme-yellow body {
+    background: linear-gradient(135deg, #0a0805 0%, #15100a 50%, #1c0e04 100%) !important;
+  }
+  .theme-blue body {
+    background: linear-gradient(135deg, #040810 0%, #08111a 50%, #01060c 100%) !important;
+  }
+  .theme-teal body {
+    background: linear-gradient(135deg, #030a09 0%, #061411 50%, #010806 100%) !important;
+  }
 }
 @keyframes gradientShift {
   0% { background-position: 0% 50%; }
