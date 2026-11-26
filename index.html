@@ -1234,6 +1234,8 @@ body {
           <span class="roll-count" id="playlistStats">0 FILES</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
+          <button class="enable-all-link visible" id="addFilesBtn" title="Загрузить свои треки с устройства" style="color:var(--ink-muted)">+ ADD</button>
+          <input type="file" id="localFileInput" accept="audio/*" multiple hidden>
           <button class="enable-all-link" id="enableAllBtn">ENABLE ALL</button>
           <button class="sheet-close-btn" id="modalClose">CLOSE</button>
         </div>
@@ -1251,6 +1253,7 @@ body {
   <footer class="bottom-dock">
     <div class="dock-left">
       <button class="text-btn" id="speedBtn" title="Скорость воспроизведения">1.0×</button>
+      <button class="text-btn" id="synthBtn" title="Встроенный Web Audio синтезатор (живой звук и физика без файлов)">SYNTH</button>
       <button class="text-btn mobile-dsp-trigger" id="dspToggleBtn">DSP / VOL</button>
     </div>
 
@@ -1362,8 +1365,11 @@ body {
   const spatialStateEl = document.getElementById('spatialState');
 
   const speedBtn = document.getElementById('speedBtn');
+  const synthBtn = document.getElementById('synthBtn');
   const dspRail = document.getElementById('dspRail');
   const dspToggleBtn = document.getElementById('dspToggleBtn');
+  const addFilesBtn = document.getElementById('addFilesBtn');
+  const localFileInput = document.getElementById('localFileInput');
 
   const playBtn = document.getElementById('playBtn');
   const playIcon = document.getElementById('playIcon');
@@ -1393,6 +1399,12 @@ body {
   if (isNaN(visualizerStyle) || visualizerStyle < 0) visualizerStyle = 0;
 
   let isPlaying = false;
+  let synthActive = false;
+  let synthTimer = null;
+  let synthStep = 0;
+  let synthStartTime = 0;
+  let synthBus = null;
+  let localFileMeta = {};
   let audio = new Audio();
   let currentAudioCtx = null;
   let analyser = null;
@@ -1511,7 +1523,7 @@ body {
   }
 
   function sampleAudio(now) {
-    const activePlay = isPlaying && !audio.paused;
+    const activePlay = isPlaying && (!audio.paused || synthActive);
     let realSignal = false;
 
     if (analyser && activePlay) {
@@ -1565,7 +1577,7 @@ body {
     // Band extraction
     let s = 0, m = 0, a = 0;
     for (let i = 0; i < 6; i++) s += freqData[i];
-    for (let i = 6; i < 24; i++) m += freqData[i];
+    for (let i = 0; i < 24; i++) m += freqData[i];
     for (let i = 24; i < 54; i++) a += freqData[i];
     subLevel += ((s / (6 * 255)) - subLevel) * 0.3;
     midLevel += ((m / (18 * 255)) - midLevel) * 0.3;
@@ -1583,14 +1595,21 @@ body {
 
     if (isScrubbingRing) {
       dbReadoutEl.textContent = 'SCRUBBING';
-    } else if (isPlaying && !audio.paused) {
+    } else if (isPlaying && (!audio.paused || synthActive)) {
       dbReadoutEl.textContent = smoothedDb <= -47 ? 'ACTIVE' : `${smoothedDb.toFixed(1)} dB`;
     } else {
       dbReadoutEl.textContent = 'STANDBY';
     }
 
     // Update smooth progress inside chronograph render
-    if (!isScrubbingRing && !isSeeking) {
+    if (synthActive && isPlaying) {
+      const elapsed = (now - synthStartTime) * 0.001;
+      const cycle = 32;
+      const sec = elapsed % cycle;
+      progressTarget = sec / cycle;
+      currentTimeEl.textContent = formatTime(sec);
+      totalTimeEl.textContent = '/ 00:32';
+    } else if (!isScrubbingRing && !isSeeking) {
       progressTarget = (audio.duration && isFinite(audio.duration)) ? audio.currentTime / audio.duration : 0;
     }
     const pDiff = progressTarget - progressSmooth;
@@ -1692,66 +1711,74 @@ body {
   }
 
   function drawCoronaString(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib) {
-    // Inner subtle boundary ring
+    // 1. 64-Ray Mirrored Dual-Polar FFT Spectrum Corona (batched in 2 fast strokes!)
+    const rays = 64;
+    const baseCoronaR = baseR * 0.78;
     ctx.beginPath();
-    ctx.arc(cx, cy, baseR * 0.72, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${ir},${ig},${ib},0.08)`;
-    ctx.lineWidth = 1;
+    for (let i = 0; i < rays; i++) {
+      const a = (i / rays) * Math.PI * 2 - Math.PI * 0.5;
+      const mirror = i < rays * 0.5 ? i : rays - 1 - i;
+      const bin = Math.min(freqData.length - 1, Math.floor((mirror / (rays * 0.5)) * 42));
+      const energy = freqData[bin] / 255;
+      const len = 4 + energy * (baseR * 0.42);
+      const rIn = baseCoronaR - energy * (baseR * 0.14);
+      const cos = Math.cos(a);
+      const sin = Math.sin(a);
+      ctx.moveTo(cx + cos * rIn, cy + sin * rIn);
+      ctx.lineTo(cx + cos * (baseCoronaR + len), cy + sin * (baseCoronaR + len));
+    }
+    ctx.strokeStyle = `rgba(${ir},${ig},${ib},${0.16 + airLevel * 0.55})`;
+    ctx.lineWidth = 1.1;
     ctx.stroke();
 
+    // 2. Compute Elastic Catmull-style Standing-Wave String Vertices
     for (let i = 0; i < STRING_N; i++) {
       const a = (i / STRING_N) * Math.PI * 2 - Math.PI * 0.5;
-      const rad = baseR + strDisp[i] * 7.5;
+      // Resting geometric 6-node acoustic crown when idle + live spring displacement
+      const restForm = Math.cos(6 * a) * 2.2 + Math.sin(3 * a) * 1.1;
+      const rad = baseR + restForm + strDisp[i] * 7.5;
       strX[i] = cx + Math.cos(a) * rad;
       strY[i] = cy + Math.sin(a) * rad;
     }
 
-    // Closed smooth Catmull-style quadratic spline
+    // 3. Nodal Interference Web (105-degree chords mathematically clear center clock!)
+    const chordStep = ecoMode ? 6 : 4;
+    ctx.beginPath();
+    for (let i = 0; i < STRING_N; i += chordStep) {
+      const target = (i + 35) % STRING_N;
+      ctx.moveTo(strX[i], strY[i]);
+      ctx.lineTo(strX[target], strY[target]);
+    }
+    ctx.strokeStyle = `rgba(${ar},${ag},${ab},${0.11 + subLevel * 0.34})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // 4. Closed Smooth Acoustic Membrane Spline
     ctx.beginPath();
     const firstMidX = (strX[STRING_N - 1] + strX[0]) * 0.5;
     const firstMidY = (strY[STRING_N - 1] + strY[0]) * 0.5;
     ctx.moveTo(firstMidX, firstMidY);
     for (let i = 0; i < STRING_N; i++) {
       const next = (i + 1) % STRING_N;
-      const mx = (strX[i] + strX[next]) * 0.5;
-      const my = (strY[i] + strY[next]) * 0.5;
-      ctx.quadraticCurveTo(strX[i], strY[i], mx, my);
+      ctx.quadraticCurveTo(strX[i], strY[i], (strX[i] + strX[next]) * 0.5, (strY[i] + strY[next]) * 0.5);
     }
     ctx.closePath();
 
-    // Soft halo + razor-sharp main string
     ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.22)`;
     ctx.lineWidth = 5;
     ctx.stroke();
     ctx.strokeStyle = theme.accent;
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
-
-    // Secondary harmonic phase echo in ink color
-    ctx.beginPath();
-    for (let i = 0; i < STRING_N; i += 2) {
-      const a = (i / STRING_N) * Math.PI * 2 - Math.PI * 0.5;
-      const rad = baseR * 0.84 - strDisp[i] * 3.5;
-      const px = cx + Math.cos(a) * rad;
-      const py = cy + Math.sin(a) * rad;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
-    }
-    ctx.closePath();
-    ctx.strokeStyle = `rgba(${ir},${ig},${ib},${0.16 + midLevel * 0.4})`;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.75;
     ctx.stroke();
   }
 
   function drawStrataEngraving(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib, audioAlive) {
-    // Record live acoustic energy into angular sector at playhead
     const sector = Math.min(STRATA_SECTORS - 1, Math.floor(progressSmooth * STRATA_SECTORS));
     if (audioAlive) {
       const energy = Math.min(1, subLevel * 0.6 + midLevel * 0.45 + airLevel * 0.25);
       strataGrooves[sector] = Math.max(strataGrooves[sector] * 0.7, energy);
     }
 
-    // Concentric lathe reference grooves
     for (let ring = 0; ring < 4; ring++) {
       ctx.beginPath();
       ctx.arc(cx, cy, baseR * (0.64 + ring * 0.14), 0, Math.PI * 2);
@@ -1760,7 +1787,6 @@ body {
       ctx.stroke();
     }
 
-    // Engraved radial sonic strata needles
     ctx.lineCap = 'round';
     for (let i = 0; i < STRATA_SECTORS; i++) {
       const a = (i / STRATA_SECTORS) * Math.PI * 2 - Math.PI * 0.5;
@@ -1782,43 +1808,82 @@ body {
       }
       ctx.stroke();
     }
+
+    // Live sweeping lathe stylus beam at current playhead angle
+    const stylusA = progressSmooth * Math.PI * 2 - Math.PI * 0.5;
+    const stylusVib = audioAlive ? (subLevel + midLevel) * 10 : 0;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(stylusA) * (baseR * 0.62), cy + Math.sin(stylusA) * (baseR * 0.62));
+    ctx.lineTo(cx + Math.cos(stylusA) * (baseR * 1.18 + stylusVib), cy + Math.sin(stylusA) * (baseR * 1.18 + stylusVib));
+    ctx.strokeStyle = theme.accent;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
   }
 
   function drawPendulumAttractor(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib, audioAlive) {
-    if (audioAlive) pendPhase += 0.018 + subLevel * 0.032;
+    if (audioAlive) pendPhase += 0.02 + subLevel * 0.036;
 
-    // Fine orbital boundaries framing the central clock eye
+    // Precision guilloche boundary circles
     ctx.beginPath();
     ctx.arc(cx, cy, baseR * 0.56, 0, Math.PI * 2);
-    ctx.arc(cx, cy, baseR * 1.04, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${ir},${ig},${ib},0.075)`;
+    ctx.arc(cx, cy, baseR * 1.08, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${ir},${ig},${ib},0.085)`;
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Toroidal epicycloid harmonograph ribbon orbiting around the central eye
-    const pts = ecoMode ? 160 : 240;
-    const lobes = 3 + Math.round(midLevel * 3);
-    const modFreq = 5 + Math.round(airLevel * 4);
-    const ringCenter = baseR * 0.80;
-    const radialSwing = baseR * (0.14 + subLevel * 0.14);
+    // 4-Pass Damped Swiss Guilloché + Live Waveform Ripple Injection
+    const pts = ecoMode ? 150 : 210;
+    const lobes = 5 + midLevel * 3.5; // Continuous (zero snapping!)
+    const modFreq = 7 + airLevel * 5.0;
+    const ringCenter = baseR * 0.82;
+    const layers = ecoMode ? 3 : 4;
 
-    ctx.beginPath();
-    for (let i = 0; i <= pts; i++) {
-      const t = (i / pts) * Math.PI * 4;
-      const rad = ringCenter + Math.sin(lobes * t + pendPhase) * radialSwing * 0.65
-        + Math.cos(modFreq * t - pendPhase * 1.4) * radialSwing * 0.35;
-      const theta = t * 0.5 - Math.PI * 0.5 + Math.sin(t + pendPhase * 0.4) * 0.12;
-      const x = cx + Math.cos(theta) * rad;
-      const y = cy + Math.sin(theta) * rad;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+    for (let l = layers - 1; l >= 0; l--) {
+      const decay = 1 - l * 0.16;
+      const ph = pendPhase - l * 0.42;
+      const swing = baseR * (0.14 + subLevel * 0.14) * decay;
+
+      ctx.beginPath();
+      for (let i = 0; i <= pts; i++) {
+        const u = i / pts;
+        const t = u * Math.PI * 4;
+        const pcmIdx = Math.floor(u * (timeData.length - 1));
+        const pcmRipple = l === 0 ? ((timeData[pcmIdx] - 128) / 128) * (baseR * 0.09) : 0;
+
+        const rad = ringCenter
+          + Math.sin(lobes * t + ph) * swing * 0.65
+          + Math.cos(modFreq * t - ph * 1.35) * swing * 0.35
+          + pcmRipple;
+        const theta = t * 0.5 - Math.PI * 0.5 + Math.sin(t * 2 + ph * 0.5) * 0.09;
+        const x = cx + Math.cos(theta) * rad;
+        const y = cy + Math.sin(theta) * rad;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+
+      if (l === 0) {
+        ctx.strokeStyle = theme.accent;
+        ctx.lineWidth = 1.65;
+      } else if (l === 1) {
+        ctx.strokeStyle = `rgba(${ir},${ig},${ib},${0.18 + midLevel * 0.4})`;
+        ctx.lineWidth = 1.1;
+      } else {
+        ctx.strokeStyle = `rgba(${ar},${ag},${ab},${0.22 - l * 0.04})`;
+        ctx.lineWidth = 0.9;
+      }
+      ctx.stroke();
     }
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.22)`;
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    ctx.strokeStyle = theme.accent;
-    ctx.lineWidth = 1.45;
-    ctx.stroke();
+
+    // 4 Orbiting Stereo Phase Anti-Node Markers
+    const pan = (pannerNode && spatialAudioActive) ? pannerNode.pan.value : 0;
+    for (let k = 0; k < 4; k++) {
+      const nodeAng = pendPhase * 0.7 + (k * Math.PI * 0.5);
+      const nodeR = baseR * (0.82 + (k % 2 === 0 ? subLevel : midLevel) * 0.22 + (k === 1 ? pan * 0.08 : 0));
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(nodeAng) * nodeR, cy + Math.sin(nodeAng) * nodeR, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = k % 2 === 0 ? theme.accent : `rgba(${ir},${ig},${ib},0.75)`;
+      ctx.fill();
+    }
   }
 
   // Pluck string helper when touching inside chronograph
@@ -1993,7 +2058,7 @@ body {
   // ===================================================================
   //  AUDIO ENGINE & PLAYBACK
   // ===================================================================
-  function getBaseName(p) { return p.split('/').pop().split('\\').pop(); }
+  function getBaseName(p) { return localFileMeta[p] ? localFileMeta[p].name : p.split('/').pop().split('\\').pop(); }
   function formatName(n) { return n.replace(/\.(mp3|m4a|wav|flac|ogg|aac)$/i, '').replace(/[-_]/g, ' ').trim(); }
   function getFileExt(n) { const m = n.match(/\.([a-z0-9]+)$/i); return m ? m[1].toUpperCase() : 'PCM'; }
   function formatTime(sec) {
@@ -2001,7 +2066,10 @@ body {
     const s = Math.floor(sec);
     return `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
   }
-  function encodePath(p) { return p.split('/').map(s => encodeURIComponent(decodeURIComponent(s))).join('/'); }
+  function encodePath(p) {
+    if (p.startsWith('blob:') || p.startsWith('data:')) return p;
+    return p.split('/').map(s => encodeURIComponent(decodeURIComponent(s))).join('/');
+  }
   function isSongDisabled(p) { return disabledSongs.includes(p); }
 
   function toggleSongState(p) {
@@ -2079,15 +2147,14 @@ body {
     return currentIndex;
   }
 
-  function setupAudioContext() {
-    if (isIOS && iosBackgroundMode) { sampleRateReadout.textContent = 'IOS DIRECT'; return; }
+  function setupAudioContext(forceForSynth = false) {
+    if (!forceForSynth && isIOS && iosBackgroundMode) { sampleRateReadout.textContent = 'IOS DIRECT'; return; }
     try {
       if (!currentAudioCtx) currentAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (currentAudioCtx.sampleRate) {
         sampleRateReadout.textContent = `${(currentAudioCtx.sampleRate / 1000).toFixed(1)}kHz`;
       }
-      if (!source) {
-        source = currentAudioCtx.createMediaElementSource(audio);
+      if (!analyser) {
         analyser = currentAudioCtx.createAnalyser();
         analyser.fftSize = 256;
         analyser.smoothingTimeConstant = 0.78;
@@ -2111,17 +2178,144 @@ body {
         gainNode = currentAudioCtx.createGain();
         gainNode.gain.value = targetVolume * (bassBoostActive ? 1.55 : 1.15);
 
-        source.connect(bassFilter);
         bassFilter.connect(airFilter);
         if (pannerNode) { airFilter.connect(pannerNode); pannerNode.connect(gainNode); }
         else airFilter.connect(gainNode);
         gainNode.connect(analyser);
         analyser.connect(currentAudioCtx.destination);
       }
+      if (!source && !(isIOS && iosBackgroundMode)) {
+        try {
+          source = currentAudioCtx.createMediaElementSource(audio);
+          source.connect(bassFilter);
+        } catch (err) {}
+      }
       if (currentAudioCtx.state === 'suspended') currentAudioCtx.resume().catch(() => {});
     } catch (e) {
       analyser = null;
     }
+  }
+
+  // Procedural Web Audio Ambient Poly-Synth (lets user experience live DSP + physics without external files)
+  function triggerSynthStep() {
+    if (!synthActive || !currentAudioCtx || !bassFilter) return;
+    const t = currentAudioCtx.currentTime;
+    const step = synthStep % 16;
+    synthStep++;
+
+    // Sub Kick on 0, 4, 8, 12
+    if (step % 4 === 0) {
+      const osc = currentAudioCtx.createOscillator();
+      const g = currentAudioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(118, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.14);
+      g.gain.setValueAtTime(0.55, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(g);
+      g.connect(bassFilter);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    }
+
+    // Off-beat crisp closed hat / shimmer
+    if (step % 2 === 1) {
+      const osc = currentAudioCtx.createOscillator();
+      const hp = currentAudioCtx.createBiquadFilter();
+      const g = currentAudioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(step % 4 === 3 ? 6400 : 4800, t);
+      hp.type = 'highpass';
+      hp.frequency.value = 5000;
+      g.gain.setValueAtTime(step % 4 === 3 ? 0.08 : 0.045, t);
+      g.gain.exponentialRampToValueAtTime(0.0005, t + 0.06);
+      osc.connect(hp);
+      hp.connect(g);
+      g.connect(bassFilter);
+      osc.start(t);
+      osc.stop(t + 0.07);
+    }
+
+    // Warm Minor-9th chord pluck every bar (0 & 6 & 10)
+    const chords = [
+      [146.83, 220.00, 261.63, 329.63], // Dm9
+      [130.81, 196.00, 246.94, 293.66], // Cmaj9
+      [116.54, 174.61, 220.00, 261.63], // Bbmaj7
+      [110.00, 164.81, 196.00, 246.94]  // Am7
+    ];
+    if (step === 0 || step === 6 || step === 10) {
+      const chord = chords[Math.floor((synthStep / 16) % chords.length)];
+      const filter = currentAudioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1600, t);
+      filter.frequency.exponentialRampToValueAtTime(420, t + 0.45);
+      filter.connect(bassFilter);
+
+      const notes = step === 0 ? chord : [chord[1], chord[2]];
+      for (const freq of notes) {
+        const osc = currentAudioCtx.createOscillator();
+        const g = currentAudioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0.001, t);
+        g.gain.linearRampToValueAtTime(0.11, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.48);
+        osc.connect(g);
+        g.connect(filter);
+        osc.start(t);
+        osc.stop(t + 0.5);
+      }
+    }
+  }
+
+  async function startSynthDemo() {
+    if (!audio.paused) audio.pause();
+    setupAudioContext(true);
+    if (currentAudioCtx && currentAudioCtx.state === 'suspended') {
+      await currentAudioCtx.resume();
+    }
+    applyGainImmediate(targetVolume);
+    synthActive = true;
+    synthStep = 0;
+    synthStartTime = performance.now();
+    synthBtn.classList.add('active');
+    trackNameEl.textContent = 'Harmonic Field Generator';
+    codecBadgeEl.textContent = 'SYNTH';
+    trackArtistEl.textContent = 'LIVE WEB AUDIO SYNTHESIS';
+    updateTrackNameScroll();
+    setPlaybackUI(true);
+    triggerSynthStep();
+    clearInterval(synthTimer);
+    synthTimer = setInterval(triggerSynthStep, 128);
+    showToast('SYNTH // LIVE SIGNAL');
+  }
+
+  function stopSynthDemo(quiet = false) {
+    if (!synthActive) return;
+    synthActive = false;
+    clearInterval(synthTimer);
+    synthTimer = null;
+    synthBtn.classList.remove('active');
+    if (!quiet) {
+      setPlaybackUI(false);
+      trackArtistEl.textContent = 'SYNTH PAUSED';
+    }
+  }
+
+  function addLocalAudioFiles(fileList) {
+    const valid = Array.from(fileList || []).filter(f => /\.(mp3|m4a|wav|flac|ogg|aac)$/i.test(f.name) || f.type.startsWith('audio/'));
+    if (valid.length === 0) return;
+    const firstNewIdx = songFiles.length;
+    for (const file of valid) {
+      const url = URL.createObjectURL(file);
+      localFileMeta[url] = { name: file.name };
+      songFiles.push(url);
+    }
+    if (shuffleOn) generateShuffleOrder();
+    renderSongList();
+    stopSynthDemo(true);
+    loadTrack(firstNewIdx, true);
+    showToast(`+${valid.length} TRACK${valid.length > 1 ? 'S' : ''}`);
   }
 
   function applyGainImmediate(vol) {
@@ -2216,6 +2410,7 @@ body {
 
   async function loadTrack(index, autoplay = true) {
     if (index < 0 || index >= songFiles.length) return;
+    stopSynthDemo(true);
     currentIndex = index;
     localStorage.setItem('lastTrackIndex', String(index));
     if (shuffleOn && shuffleOrder.length > 0) {
@@ -2268,7 +2463,14 @@ body {
   }
 
   async function togglePlay() {
-    if (songFiles.length === 0) return;
+    if (synthActive) {
+      stopSynthDemo(false);
+      return;
+    }
+    if (songFiles.length === 0) {
+      await startSynthDemo();
+      return;
+    }
     if (currentIndex === -1) {
       const startIdx = (shuffleOn && shuffleOrder.length > 0) ? shuffleOrder[0] : getFirstEnabledIndex();
       await loadTrack(startIdx, true);
@@ -2288,7 +2490,7 @@ body {
         trackArtistEl.textContent = 'PLAYING';
         fadeAudio(targetVolume, 300);
       } catch (err) {
-        trackArtistEl.textContent = 'TAP ▶ TO PLAY';
+        trackArtistEl.textContent = 'NO AUDIO FILE · TRY SYNTH';
         setPlaybackUI(false);
       }
     } else {
@@ -2458,11 +2660,11 @@ body {
       applyVolumeVisual(volSmooth);
     }
 
-    if (pannerNode && spatialAudioActive && isPlaying && !audio.paused) {
+    if (pannerNode && spatialAudioActive && isPlaying && (!audio.paused || synthActive)) {
       pannerNode.pan.value = Math.sin(performance.now() * 0.0012) * 0.7;
     }
 
-    const keepRunning = (spatialAudioActive && isPlaying && !audio.paused) ||
+    const keepRunning = (spatialAudioActive && isPlaying && (!audio.paused || synthActive)) ||
       isDraggingVolume || Math.abs(volTarget - volSmooth) > 0.001;
     if (keepRunning) sliderRafId = requestAnimationFrame(tickSliders);
   }
@@ -2525,6 +2727,25 @@ body {
     speedBtn.textContent = `${rate.toFixed(rate % 1 === 0 ? 1 : 2)}×`;
     speedBtn.classList.toggle('active', rate !== 1.0);
     showToast(`SPEED ${speedBtn.textContent}`);
+  });
+
+  synthBtn.addEventListener('click', () => {
+    if (synthActive) stopSynthDemo(false);
+    else startSynthDemo();
+  });
+
+  addFilesBtn.addEventListener('click', () => localFileInput.click());
+  localFileInput.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files.length) addLocalAudioFiles(e.target.files);
+    e.target.value = '';
+  });
+
+  document.body.addEventListener('dragover', (e) => { e.preventDefault(); });
+  document.body.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      addLocalAudioFiles(e.dataTransfer.files);
+    }
   });
 
   shuffleBtn.addEventListener('click', () => {
@@ -2829,6 +3050,7 @@ body {
     audio = new Audio();
     bindAudioListeners();
     source = null;
+    analyser = null;
     currentAudioCtx = null;
     gainNode = null;
     bassFilter = null;
@@ -3006,7 +3228,7 @@ body {
       if (currentAudioCtx && currentAudioCtx.state === 'suspended' && isPlaying) {
         currentAudioCtx.resume().catch(() => {});
       }
-      if (isPlaying && !audio.paused) {
+      if (isPlaying && (!audio.paused || synthActive)) {
         wakeEngine();
         wakeSliderSync();
       } else {
