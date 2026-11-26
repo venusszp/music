@@ -207,36 +207,6 @@ body {
   gap: 8px;
 }
 
-.seg-group {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--hairline);
-  border-radius: 999px;
-  padding: 2px;
-  gap: 2px;
-}
-
-.seg-btn {
-  background: none;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ink-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.18s ease, color 0.18s ease;
-}
-
-.seg-btn:hover { color: var(--ink); }
-.seg-btn.active {
-  background: var(--ink);
-  color: var(--bg);
-}
-
 .pill-toggle {
   height: 28px;
   padding: 0 10px;
@@ -1094,7 +1064,6 @@ body {
   }
   .wordmark { font-size: 13px; }
   .telemetry-inline { font-size: 9.5px; gap: 6px; }
-  .seg-btn { padding: 3px 7px; font-size: 8.5px; }
   .pill-toggle { height: 24px; padding: 0 7px; font-size: 8.5px; }
   .stone-row { height: 24px; padding: 0 6px; gap: 5px; }
   .stone { width: 10px; height: 10px; }
@@ -1133,11 +1102,6 @@ body {
     </div>
 
     <div class="top-controls">
-      <div class="seg-group" role="tablist" aria-label="Скульптура звука">
-        <button class="seg-btn" data-vis="0" role="tab">CORONA</button>
-        <button class="seg-btn" data-vis="1" role="tab">STRATA</button>
-        <button class="seg-btn" data-vis="2" role="tab">PENDULUM</button>
-      </div>
       <button id="ecoToggle" class="pill-toggle" title="Эко-режим: 30Hz и минимум нагрева телефона">
         <span id="ecoLabel">ECO</span>
       </button>
@@ -1395,8 +1359,6 @@ body {
   // ===================================================================
   let themeMode = localStorage.getItem('themeMode') || 'neon';
   if (!THEMES[themeMode]) themeMode = 'neon';
-  let visualizerStyle = parseInt(localStorage.getItem('visualizerStyle') || '0', 10) % 3;
-  if (isNaN(visualizerStyle) || visualizerStyle < 0) visualizerStyle = 0;
 
   let isPlaying = false;
   let synthActive = false;
@@ -1456,7 +1418,7 @@ body {
   }
 
   // ===================================================================
-  //  ELASTIC HARP / STRATA GROOVES / HARMONOGRAPH ENGINE
+  //  STRATA GROOVE ENGRAVING ENGINE
   // ===================================================================
   let stageSize = 360;
   let visRafId = null;
@@ -1465,16 +1427,8 @@ body {
   let midLevel = 0;
   let airLevel = 0;
   let smoothedDb = -60;
-  let pendPhase = 0;
 
-  // 120-vertex physical elastic sound string (CORONA mode)
-  const STRING_N = 120;
-  const strDisp = new Float32Array(STRING_N);
-  const strVel = new Float32Array(STRING_N);
-  const strX = new Float32Array(STRING_N);
-  const strY = new Float32Array(STRING_N);
-
-  // 96-sector groove engraving ring (STRATA mode)
+  // 96-sector groove engraving ring (STRATA)
   const STRATA_SECTORS = 96;
   const strataGrooves = new Float32Array(STRATA_SECTORS);
 
@@ -1616,24 +1570,6 @@ body {
     if (Math.abs(pDiff) > 0.0004) progressSmooth += pDiff * (isScrubbingRing ? 0.55 : 0.25);
     else progressSmooth = progressTarget;
 
-    // Step 1D circular elastic string spring physics
-    let stringEnergy = 0;
-    const tension = 0.16;
-    const damping = 0.87;
-    const timeSec = now * 0.001;
-    for (let i = 0; i < STRING_N; i++) {
-      const prev = strDisp[(i - 1 + STRING_N) % STRING_N];
-      const next = strDisp[(i + 1) % STRING_N];
-      const bin = Math.floor((i / STRING_N) * 44);
-      const drive = audioAlive ? ((freqData[bin] / 255) * 0.52 * Math.sin(i * 0.28 + timeSec * 5.0) + subLevel * 0.35) : 0;
-      const force = (prev + next - 2 * strDisp[i]) * tension - strDisp[i] * 0.035 + drive;
-      strVel[i] = (strVel[i] + force) * damping;
-    }
-    for (let i = 0; i < STRING_N; i++) {
-      strDisp[i] += strVel[i];
-      stringEnergy += Math.abs(strDisp[i]) + Math.abs(strVel[i]);
-    }
-
     const sz = stageSize;
     const cx = sz * 0.5;
     const cy = sz * 0.5;
@@ -1697,79 +1633,11 @@ body {
     ctx.fillStyle = theme.bg;
     ctx.fill();
 
-    // 2. Render Active Acoustic Sculpture inside outerR
+    // 2. Render STRATA Acoustic Engraving inside outerR
     const innerR = outerR * 0.72;
-    if (visualizerStyle === 0) {
-      drawCoronaString(cx, cy, innerR, theme, ar, ag, ab, ir, ig, ib);
-    } else if (visualizerStyle === 1) {
-      drawStrataEngraving(cx, cy, innerR, theme, ar, ag, ab, ir, ig, ib, audioAlive);
-    } else {
-      drawPendulumAttractor(cx, cy, innerR, theme, ar, ag, ab, ir, ig, ib, audioAlive);
-    }
+    drawStrataEngraving(cx, cy, innerR, theme, ar, ag, ab, ir, ig, ib, audioAlive);
 
-    return audioAlive || isScrubbingRing || Math.abs(pDiff) > 0.0005 || stringEnergy > 0.06;
-  }
-
-  function drawCoronaString(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib) {
-    // 1. 64-Ray Mirrored Dual-Polar FFT Spectrum Corona (batched in 2 fast strokes!)
-    const rays = 64;
-    const baseCoronaR = baseR * 0.78;
-    ctx.beginPath();
-    for (let i = 0; i < rays; i++) {
-      const a = (i / rays) * Math.PI * 2 - Math.PI * 0.5;
-      const mirror = i < rays * 0.5 ? i : rays - 1 - i;
-      const bin = Math.min(freqData.length - 1, Math.floor((mirror / (rays * 0.5)) * 42));
-      const energy = freqData[bin] / 255;
-      const len = 4 + energy * (baseR * 0.42);
-      const rIn = baseCoronaR - energy * (baseR * 0.14);
-      const cos = Math.cos(a);
-      const sin = Math.sin(a);
-      ctx.moveTo(cx + cos * rIn, cy + sin * rIn);
-      ctx.lineTo(cx + cos * (baseCoronaR + len), cy + sin * (baseCoronaR + len));
-    }
-    ctx.strokeStyle = `rgba(${ir},${ig},${ib},${0.16 + airLevel * 0.55})`;
-    ctx.lineWidth = 1.1;
-    ctx.stroke();
-
-    // 2. Compute Elastic Catmull-style Standing-Wave String Vertices
-    for (let i = 0; i < STRING_N; i++) {
-      const a = (i / STRING_N) * Math.PI * 2 - Math.PI * 0.5;
-      // Resting geometric 6-node acoustic crown when idle + live spring displacement
-      const restForm = Math.cos(6 * a) * 2.2 + Math.sin(3 * a) * 1.1;
-      const rad = baseR + restForm + strDisp[i] * 7.5;
-      strX[i] = cx + Math.cos(a) * rad;
-      strY[i] = cy + Math.sin(a) * rad;
-    }
-
-    // 3. Nodal Interference Web (105-degree chords mathematically clear center clock!)
-    const chordStep = ecoMode ? 6 : 4;
-    ctx.beginPath();
-    for (let i = 0; i < STRING_N; i += chordStep) {
-      const target = (i + 35) % STRING_N;
-      ctx.moveTo(strX[i], strY[i]);
-      ctx.lineTo(strX[target], strY[target]);
-    }
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},${0.11 + subLevel * 0.34})`;
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-
-    // 4. Closed Smooth Acoustic Membrane Spline
-    ctx.beginPath();
-    const firstMidX = (strX[STRING_N - 1] + strX[0]) * 0.5;
-    const firstMidY = (strY[STRING_N - 1] + strY[0]) * 0.5;
-    ctx.moveTo(firstMidX, firstMidY);
-    for (let i = 0; i < STRING_N; i++) {
-      const next = (i + 1) % STRING_N;
-      ctx.quadraticCurveTo(strX[i], strY[i], (strX[i] + strX[next]) * 0.5, (strY[i] + strY[next]) * 0.5);
-    }
-    ctx.closePath();
-
-    ctx.strokeStyle = `rgba(${ar},${ag},${ab},0.22)`;
-    ctx.lineWidth = 5;
-    ctx.stroke();
-    ctx.strokeStyle = theme.accent;
-    ctx.lineWidth = 1.75;
-    ctx.stroke();
+    return audioAlive || isScrubbingRing || Math.abs(pDiff) > 0.0005;
   }
 
   function drawStrataEngraving(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib, audioAlive) {
@@ -1820,88 +1688,6 @@ body {
     ctx.stroke();
   }
 
-  function drawPendulumAttractor(cx, cy, baseR, theme, ar, ag, ab, ir, ig, ib, audioAlive) {
-    if (audioAlive) pendPhase += 0.02 + subLevel * 0.036;
-
-    // Precision guilloche boundary circles
-    ctx.beginPath();
-    ctx.arc(cx, cy, baseR * 0.56, 0, Math.PI * 2);
-    ctx.arc(cx, cy, baseR * 1.08, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(${ir},${ig},${ib},0.085)`;
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 4-Pass Damped Swiss Guilloché + Live Waveform Ripple Injection
-    const pts = ecoMode ? 150 : 210;
-    const lobes = 5 + midLevel * 3.5; // Continuous (zero snapping!)
-    const modFreq = 7 + airLevel * 5.0;
-    const ringCenter = baseR * 0.82;
-    const layers = ecoMode ? 3 : 4;
-
-    for (let l = layers - 1; l >= 0; l--) {
-      const decay = 1 - l * 0.16;
-      const ph = pendPhase - l * 0.42;
-      const swing = baseR * (0.14 + subLevel * 0.14) * decay;
-
-      ctx.beginPath();
-      for (let i = 0; i <= pts; i++) {
-        const u = i / pts;
-        const t = u * Math.PI * 4;
-        const pcmIdx = Math.floor(u * (timeData.length - 1));
-        const pcmRipple = l === 0 ? ((timeData[pcmIdx] - 128) / 128) * (baseR * 0.09) : 0;
-
-        const rad = ringCenter
-          + Math.sin(lobes * t + ph) * swing * 0.65
-          + Math.cos(modFreq * t - ph * 1.35) * swing * 0.35
-          + pcmRipple;
-        const theta = t * 0.5 - Math.PI * 0.5 + Math.sin(t * 2 + ph * 0.5) * 0.09;
-        const x = cx + Math.cos(theta) * rad;
-        const y = cy + Math.sin(theta) * rad;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-
-      if (l === 0) {
-        ctx.strokeStyle = theme.accent;
-        ctx.lineWidth = 1.65;
-      } else if (l === 1) {
-        ctx.strokeStyle = `rgba(${ir},${ig},${ib},${0.18 + midLevel * 0.4})`;
-        ctx.lineWidth = 1.1;
-      } else {
-        ctx.strokeStyle = `rgba(${ar},${ag},${ab},${0.22 - l * 0.04})`;
-        ctx.lineWidth = 0.9;
-      }
-      ctx.stroke();
-    }
-
-    // 4 Orbiting Stereo Phase Anti-Node Markers
-    const pan = (pannerNode && spatialAudioActive) ? pannerNode.pan.value : 0;
-    for (let k = 0; k < 4; k++) {
-      const nodeAng = pendPhase * 0.7 + (k * Math.PI * 0.5);
-      const nodeR = baseR * (0.82 + (k % 2 === 0 ? subLevel : midLevel) * 0.22 + (k === 1 ? pan * 0.08 : 0));
-      ctx.beginPath();
-      ctx.arc(cx + Math.cos(nodeAng) * nodeR, cy + Math.sin(nodeAng) * nodeR, 2.5, 0, Math.PI * 2);
-      ctx.fillStyle = k % 2 === 0 ? theme.accent : `rgba(${ir},${ig},${ib},0.75)`;
-      ctx.fill();
-    }
-  }
-
-  // Pluck string helper when touching inside chronograph
-  function pluckStringAt(clientX, clientY, strength) {
-    const rect = chronoStage.getBoundingClientRect();
-    const cx = rect.left + rect.width * 0.5;
-    const cy = rect.top + rect.height * 0.5;
-    let ang = Math.atan2(clientY - cy, clientX - cx) + Math.PI * 0.5;
-    if (ang < 0) ang += Math.PI * 2;
-    const idx = Math.floor((ang / (Math.PI * 2)) * STRING_N) % STRING_N;
-    for (let k = -6; k <= 6; k++) {
-      const target = (idx + k + STRING_N) % STRING_N;
-      const falloff = Math.cos((k / 6) * Math.PI * 0.5);
-      strVel[target] += strength * falloff;
-    }
-    wakeEngine();
-  }
-
   // ===================================================================
   //  CIRCULAR RING SCRUBBING & GESTURES
   // ===================================================================
@@ -1946,7 +1732,6 @@ body {
     } else {
       isScrubbingRing = false;
       ptrInsideMode = true;
-      pluckStringAt(e.clientX, e.clientY, 2.2);
     }
   });
 
@@ -1962,8 +1747,6 @@ body {
         currentTimeEl.textContent = formatTime(r * audio.duration);
       }
       wakeEngine();
-    } else if (ptrInsideMode) {
-      pluckStringAt(e.clientX, e.clientY, 0.85);
     }
   });
 
@@ -1998,7 +1781,7 @@ body {
   });
 
   // ===================================================================
-  //  THEMES, ECO MODE & SCULPTURE TABS
+  //  THEMES & ECO MODE
   // ===================================================================
   function applyTheme(mode) {
     if (!THEMES[mode]) mode = 'neon';
@@ -2027,19 +1810,6 @@ body {
     if (announce) showToast(ecoMode ? 'ECO // 30HZ COOL' : 'PRECISION // 60HZ');
   }
 
-  function applyVisualizerStyle(idx, announce = false) {
-    visualizerStyle = ((idx % 3) + 3) % 3;
-    localStorage.setItem('visualizerStyle', String(visualizerStyle));
-    document.querySelectorAll('.seg-btn').forEach(b => {
-      b.classList.toggle('active', parseInt(b.dataset.vis, 10) === visualizerStyle);
-    });
-    renderChronograph(performance.now(), !isPlaying);
-    if (announce) {
-      const names = ['CORONA // ELASTIC STRING', 'STRATA // VINYL ENGRAVING', 'PENDULUM // HARMONOGRAPH'];
-      showToast(names[visualizerStyle]);
-    }
-  }
-
   ecoToggle.addEventListener('click', () => applyEcoMode(!ecoMode, true, true));
 
   document.querySelector('.stone-row').addEventListener('click', (e) => {
@@ -2047,12 +1817,6 @@ body {
     if (!stone) return;
     applyTheme(stone.dataset.theme);
     showToast(THEMES[stone.dataset.theme].name.toUpperCase());
-  });
-
-  document.querySelector('.seg-group').addEventListener('click', (e) => {
-    const btn = e.target.closest('.seg-btn');
-    if (!btn) return;
-    applyVisualizerStyle(parseInt(btn.dataset.vis, 10), true);
   });
 
   // ===================================================================
@@ -2275,6 +2039,7 @@ body {
       await currentAudioCtx.resume();
     }
     applyGainImmediate(targetVolume);
+    strataGrooves.fill(0);
     synthActive = true;
     synthStep = 0;
     synthStartTime = performance.now();
@@ -3262,7 +3027,6 @@ body {
 
   // Boot
   applyTheme(themeMode);
-  applyVisualizerStyle(visualizerStyle, false);
   applyEcoMode(ecoMode, false, false);
   measureVolumeBar();
   loadMusicFiles();
